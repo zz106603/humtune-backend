@@ -3,9 +3,9 @@ services:
     image: postgres:16
     container_name: humtune-postgres
     environment:
-      POSTGRES_DB: humtune
-      POSTGRES_USER: humtune
-      POSTGRES_PASSWORD: humtune
+      POSTGRES_DB: ${POSTGRES_DB:-humtune}
+      POSTGRES_USER: ${POSTGRES_USER:-humtune}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-humtune}
     ports:
       - "5432:5432"
     volumes:

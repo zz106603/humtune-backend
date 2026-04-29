@@ -2,9 +2,9 @@ spring:
   application:
     name: humtune
   datasource:
-    url: jdbc:postgresql://localhost:5432/humtune
-    username: humtune
-    password: humtune
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/humtune}
+    username: ${SPRING_DATASOURCE_USERNAME:humtune}
+    password: ${SPRING_DATASOURCE_PASSWORD:humtune}
   jpa:
     hibernate:
       ddl-auto: none
