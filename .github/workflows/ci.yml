@@ -6,6 +6,24 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: humtune
+          POSTGRES_USER: humtune
+          POSTGRES_PASSWORD: humtune
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U humtune -d humtune"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/humtune
+      SPRING_DATASOURCE_USERNAME: humtune
+      SPRING_DATASOURCE_PASSWORD: humtune
 
     steps:
       - name: Checkout
