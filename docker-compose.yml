@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: humtune-postgres
+    environment:
+      POSTGRES_DB: humtune
+      POSTGRES_USER: humtune
+      POSTGRES_PASSWORD: humtune
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:
