@@ -2,19 +2,24 @@ package com.yunhwan.humtune.domain.audio;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "audio_meta")
 public class AudioMeta {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+	@Column(name = "id")
+	private Long audioId;
 
 	@Column(name = "original_file_name", length = 255)
 	private String originalFileName;
@@ -28,6 +33,7 @@ public class AudioMeta {
 	@Column(name = "raw_audio_path", nullable = false, length = 1024)
 	private String rawAudioPath;
 
+	@CreatedDate
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
@@ -39,15 +45,10 @@ public class AudioMeta {
 		this.contentType = contentType;
 		this.fileSizeBytes = fileSizeBytes;
 		this.rawAudioPath = rawAudioPath;
-		this.createdAt = Instant.now();
-	}
-
-	public Long getId() {
-		return id;
 	}
 
 	public Long getAudioId() {
-		return id;
+		return audioId;
 	}
 
 	public String getOriginalFileName() {
