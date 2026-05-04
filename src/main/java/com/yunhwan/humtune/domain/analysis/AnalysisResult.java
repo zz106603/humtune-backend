@@ -2,6 +2,7 @@ package com.yunhwan.humtune.domain.analysis;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -10,8 +11,14 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import lombok.Builder;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "analysis_result")
 public class AnalysisResult {
 
@@ -26,10 +33,12 @@ public class AnalysisResult {
 	@Column(name = "detected_scale", nullable = false, length = 50)
 	private String detectedScale;
 
-	@Column(name = "adjusted_notes_json", nullable = false, columnDefinition = "text")
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "adjusted_notes_json", nullable = false, columnDefinition = "jsonb")
 	private String adjustedNotesJson;
 
-	@Column(name = "chords_json", nullable = false, columnDefinition = "text")
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "chords_json", nullable = false, columnDefinition = "jsonb")
 	private String chordsJson;
 
 	@Column(name = "midi_path", nullable = false, length = 1024)
@@ -44,12 +53,14 @@ public class AnalysisResult {
 	@Column(name = "naturalness_score")
 	private Double naturalnessScore;
 
+	@CreatedDate
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
 	protected AnalysisResult() {
 	}
 
+	@Builder
 	public AnalysisResult(
 			AnalysisRequest analysisRequest,
 			String detectedScale,
@@ -68,7 +79,6 @@ public class AnalysisResult {
 		this.feedbackText = feedbackText;
 		this.chordExplanation = chordExplanation;
 		this.naturalnessScore = naturalnessScore;
-		this.createdAt = Instant.now();
 	}
 
 	public Long getId() {

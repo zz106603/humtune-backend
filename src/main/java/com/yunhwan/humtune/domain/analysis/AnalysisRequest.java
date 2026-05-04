@@ -3,6 +3,7 @@ package com.yunhwan.humtune.domain.analysis;
 import com.yunhwan.humtune.domain.audio.AudioMeta;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
@@ -13,8 +14,11 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "analysis_request")
 public class AnalysisRequest {
 
@@ -30,6 +34,7 @@ public class AnalysisRequest {
 	@Column(name = "status", nullable = false, length = 20)
 	private AnalysisStatus status;
 
+	@CreatedDate
 	@Column(name = "requested_at", nullable = false, updatable = false)
 	private Instant requestedAt;
 
@@ -51,7 +56,6 @@ public class AnalysisRequest {
 	public AnalysisRequest(AudioMeta audioMeta) {
 		this.audioMeta = audioMeta;
 		this.status = AnalysisStatus.PENDING;
-		this.requestedAt = Instant.now();
 	}
 
 	public void markProcessing() {
