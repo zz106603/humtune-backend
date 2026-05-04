@@ -6,6 +6,7 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:humtune}
     password: ${SPRING_DATASOURCE_PASSWORD:humtune}
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: none
   sql:
