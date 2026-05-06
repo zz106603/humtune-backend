@@ -86,6 +86,31 @@ class AudioUploadServiceTest {
 		verify(localAudioStorage, never()).store(any());
 	}
 
+	@Test
+	void 메타데이터_저장_실패시_업로드된_파일을_삭제한다() {
+		MockMultipartFile file = new MockMultipartFile("file", "sample.wav", "audio/wav", "audio".getBytes());
+		when(localAudioStorage.store(file)).thenReturn("build/audio-uploads/sample.wav");
+		when(audioMetaRepository.save(any())).thenThrow(new RuntimeException("db failed"));
+
+		assertThatThrownBy(() -> audioUploadService.upload(file))
+				.isInstanceOf(RuntimeException.class)
+				.hasMessageContaining("db failed");
+		verify(localAudioStorage).delete("build/audio-uploads/sample.wav");
+	}
+
+	@Test
+	void 분석요청_저장_실패시_업로드된_파일을_삭제한다() {
+		MockMultipartFile file = new MockMultipartFile("file", "sample.wav", "audio/wav", "audio".getBytes());
+		when(localAudioStorage.store(file)).thenReturn("build/audio-uploads/sample.wav");
+		when(audioMetaRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+		when(analysisRequestRepository.save(any())).thenThrow(new RuntimeException("db failed"));
+
+		assertThatThrownBy(() -> audioUploadService.upload(file))
+				.isInstanceOf(RuntimeException.class)
+				.hasMessageContaining("db failed");
+		verify(localAudioStorage).delete("build/audio-uploads/sample.wav");
+	}
+
 	private void setField(Object target, String fieldName, Object value) throws Exception {
 		Field field = target.getClass().getDeclaredField(fieldName);
 		field.setAccessible(true);
