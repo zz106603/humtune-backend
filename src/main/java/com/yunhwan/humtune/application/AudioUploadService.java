@@ -34,13 +34,20 @@ public class AudioUploadService {
 		validate(file);
 
 		String rawAudioPath = localAudioStorage.store(file);
-		AudioMeta audioMeta = audioMetaRepository.save(new AudioMeta(
-				file.getOriginalFilename(),
-				file.getContentType(),
-				file.getSize(),
-				rawAudioPath
-		));
-		AnalysisRequest analysisRequest = analysisRequestRepository.save(new AnalysisRequest(audioMeta));
+		AudioMeta audioMeta;
+		AnalysisRequest analysisRequest;
+		try {
+			audioMeta = audioMetaRepository.save(new AudioMeta(
+					file.getOriginalFilename(),
+					file.getContentType(),
+					file.getSize(),
+					rawAudioPath
+			));
+			analysisRequest = analysisRequestRepository.save(new AnalysisRequest(audioMeta));
+		} catch (RuntimeException ex) {
+			localAudioStorage.delete(rawAudioPath);
+			throw ex;
+		}
 
 		return new AudioUploadResponse(
 				audioMeta.getAudioId(),

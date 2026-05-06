@@ -30,6 +30,13 @@ public class LocalAudioStorage {
 		}
 	}
 
+	public void delete(String rawAudioPath) {
+		try {
+			Files.deleteIfExists(Path.of(rawAudioPath));
+		} catch (IOException ignored) {
+		}
+	}
+
 	private String extensionOf(String filename) {
 		if (filename == null) {
 			return "";
