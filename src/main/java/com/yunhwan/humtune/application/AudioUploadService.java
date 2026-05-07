@@ -6,6 +6,7 @@ import com.yunhwan.humtune.domain.analysis.AnalysisRequestRepository;
 import com.yunhwan.humtune.domain.audio.AudioMeta;
 import com.yunhwan.humtune.domain.audio.AudioMetaRepository;
 import com.yunhwan.humtune.infrastructure.LocalAudioStorage;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,15 +19,18 @@ public class AudioUploadService {
 	private final AudioMetaRepository audioMetaRepository;
 	private final AnalysisRequestRepository analysisRequestRepository;
 	private final LocalAudioStorage localAudioStorage;
+	private final ApplicationEventPublisher eventPublisher;
 
 	public AudioUploadService(
 			AudioMetaRepository audioMetaRepository,
 			AnalysisRequestRepository analysisRequestRepository,
-			LocalAudioStorage localAudioStorage
+			LocalAudioStorage localAudioStorage,
+			ApplicationEventPublisher eventPublisher
 	) {
 		this.audioMetaRepository = audioMetaRepository;
 		this.analysisRequestRepository = analysisRequestRepository;
 		this.localAudioStorage = localAudioStorage;
+		this.eventPublisher = eventPublisher;
 	}
 
 	@Transactional
@@ -48,6 +52,7 @@ public class AudioUploadService {
 			localAudioStorage.delete(rawAudioPath);
 			throw ex;
 		}
+		eventPublisher.publishEvent(new AnalysisRequestedEvent(analysisRequest.getId()));
 
 		return new AudioUploadResponse(
 				audioMeta.getAudioId(),
