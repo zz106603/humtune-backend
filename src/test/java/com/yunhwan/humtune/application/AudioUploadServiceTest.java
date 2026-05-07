@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -34,11 +35,19 @@ class AudioUploadServiceTest {
 	@Mock
 	private LocalAudioStorage localAudioStorage;
 
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
+
 	private AudioUploadService audioUploadService;
 
 	@BeforeEach
 	void setUp() {
-		audioUploadService = new AudioUploadService(audioMetaRepository, analysisRequestRepository, localAudioStorage);
+		audioUploadService = new AudioUploadService(
+				audioMetaRepository,
+				analysisRequestRepository,
+				localAudioStorage,
+				eventPublisher
+		);
 	}
 
 	@Test
@@ -64,6 +73,7 @@ class AudioUploadServiceTest {
 		verify(localAudioStorage).store(file);
 		verify(audioMetaRepository).save(any(AudioMeta.class));
 		verify(analysisRequestRepository).save(any(AnalysisRequest.class));
+		verify(eventPublisher).publishEvent(new AnalysisRequestedEvent(2L));
 	}
 
 	@Test
@@ -96,6 +106,7 @@ class AudioUploadServiceTest {
 				.isInstanceOf(RuntimeException.class)
 				.hasMessageContaining("db failed");
 		verify(localAudioStorage).delete("build/audio-uploads/sample.wav");
+		verify(eventPublisher, never()).publishEvent(any());
 	}
 
 	@Test
@@ -109,6 +120,7 @@ class AudioUploadServiceTest {
 				.isInstanceOf(RuntimeException.class)
 				.hasMessageContaining("db failed");
 		verify(localAudioStorage).delete("build/audio-uploads/sample.wav");
+		verify(eventPublisher, never()).publishEvent(any());
 	}
 
 	private void setField(Object target, String fieldName, Object value) throws Exception {
