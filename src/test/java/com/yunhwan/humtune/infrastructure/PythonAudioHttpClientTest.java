@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
@@ -114,5 +115,21 @@ class PythonAudioHttpClientTest {
 		} finally {
 			server.stop(0);
 		}
+	}
+
+	@Test
+	void Python_오디오_서비스_네트워크_오류는_전용_예외로_전파한다() throws Exception {
+		int unusedPort;
+		try (ServerSocket socket = new ServerSocket(0)) {
+			unusedPort = socket.getLocalPort();
+		}
+		PythonAudioHttpClient client = new PythonAudioHttpClient(
+				RestClient.builder(),
+				"http://127.0.0.1:" + unusedPort
+		);
+
+		assertThatThrownBy(() -> client.analyze(9L, "build/audio-uploads/test.m4a", "build/audio-outputs"))
+				.isInstanceOf(PythonAudioClientException.class)
+				.hasMessageContaining("Python audio service request failed");
 	}
 }

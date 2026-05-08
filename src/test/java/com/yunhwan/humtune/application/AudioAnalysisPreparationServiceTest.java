@@ -59,6 +59,45 @@ class AudioAnalysisPreparationServiceTest {
 		assertThat(markProcessing.isAnnotationPresent(Transactional.class)).isTrue();
 	}
 
+	@Test
+	void 분석요청을_COMPLETED로_변경한다() {
+		AnalysisRequest analysisRequest = new AnalysisRequest(
+				new AudioMeta("sample.wav", "audio/wav", 5L, "build/audio-uploads/sample.wav")
+		);
+		analysisRequest.markProcessing();
+		when(analysisRequestRepository.findById(2L)).thenReturn(Optional.of(analysisRequest));
+
+		audioAnalysisPreparationService.markCompleted(2L);
+
+		assertThat(analysisRequest.getStatus()).isEqualTo(AnalysisStatus.COMPLETED);
+		assertThat(analysisRequest.getCompletedAt()).isNotNull();
+		assertThat(analysisRequest.getErrorMessage()).isNull();
+	}
+
+	@Test
+	void 분석요청을_FAILED로_변경한다() {
+		AnalysisRequest analysisRequest = new AnalysisRequest(
+				new AudioMeta("sample.wav", "audio/wav", 5L, "build/audio-uploads/sample.wav")
+		);
+		analysisRequest.markProcessing();
+		when(analysisRequestRepository.findById(2L)).thenReturn(Optional.of(analysisRequest));
+
+		audioAnalysisPreparationService.markFailed(2L, "Python audio analysis failed: read timed out");
+
+		assertThat(analysisRequest.getStatus()).isEqualTo(AnalysisStatus.FAILED);
+		assertThat(analysisRequest.getFailedAt()).isNotNull();
+		assertThat(analysisRequest.getErrorMessage()).isEqualTo("Python audio analysis failed: read timed out");
+	}
+
+	@Test
+	void 완료와_실패_변경_메서드는_트랜잭션_메서드다() throws Exception {
+		Method markCompleted = AudioAnalysisPreparationService.class.getMethod("markCompleted", Long.class);
+		Method markFailed = AudioAnalysisPreparationService.class.getMethod("markFailed", Long.class, String.class);
+
+		assertThat(markCompleted.isAnnotationPresent(Transactional.class)).isTrue();
+		assertThat(markFailed.isAnnotationPresent(Transactional.class)).isTrue();
+	}
+
 	private void setField(Object target, String fieldName, Object value) throws Exception {
 		Field field = target.getClass().getDeclaredField(fieldName);
 		field.setAccessible(true);
