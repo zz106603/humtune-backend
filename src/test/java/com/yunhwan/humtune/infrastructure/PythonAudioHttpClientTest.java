@@ -159,11 +159,27 @@ class PythonAudioHttpClientTest {
 	}
 
 	@Test
+	void timeout_메시지는_대소문자와_무관하게_TIMEOUT으로_분류한다() {
+		RestClientException exception = new RestClientException("Read timed out");
+
+		assertThat(PythonAudioHttpClient.classifyFailure(exception))
+				.isEqualTo(FailureCategory.PYTHON_TIMEOUT);
+	}
+
+	@Test
 	void connect_오류는_NETWORK_ERROR로_분류한다() {
 		RestClientException exception = new RestClientException(
 				"request failed",
 				new ConnectException("Connection refused")
 		);
+
+		assertThat(PythonAudioHttpClient.classifyFailure(exception))
+				.isEqualTo(FailureCategory.PYTHON_NETWORK_ERROR);
+	}
+
+	@Test
+	void connect_메시지는_대소문자와_무관하게_NETWORK_ERROR로_분류한다() {
+		RestClientException exception = new RestClientException("ConnectException: Connection refused");
 
 		assertThat(PythonAudioHttpClient.classifyFailure(exception))
 				.isEqualTo(FailureCategory.PYTHON_NETWORK_ERROR);
