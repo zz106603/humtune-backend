@@ -13,3 +13,10 @@ spring:
   sql:
     init:
       mode: never
+
+audio-service:
+  base-url: ${AUDIO_SERVICE_BASE_URL:http://127.0.0.1:8000}
+
+humtune:
+  audio:
+    output-directory: ${HUMTUNE_AUDIO_OUTPUT_DIRECTORY:build/audio-outputs}
