@@ -104,7 +104,9 @@ public class PythonAudioHttpClient implements PythonAudioClient {
 	}
 
 	static FailureCategory classifyFailure(Throwable throwable) {
-		if (hasCause(throwable, SocketTimeoutException.class) || hasCauseNameContaining(throwable, "Timeout")) {
+		if (hasCause(throwable, SocketTimeoutException.class)
+				|| hasCauseNameContaining(throwable, "Timeout")
+				|| hasCauseNameContaining(throwable, "timed out")) {
 			return FailureCategory.PYTHON_TIMEOUT;
 		}
 		if (hasCause(throwable, ConnectException.class)
@@ -128,11 +130,13 @@ public class PythonAudioHttpClient implements PythonAudioClient {
 	}
 
 	private static boolean hasCauseNameContaining(Throwable throwable, String text) {
+		String normalizedText = text.toLowerCase();
 		Throwable current = throwable;
 		while (current != null) {
-			String className = current.getClass().getSimpleName();
+			String className = current.getClass().getSimpleName().toLowerCase();
 			String message = current.getMessage();
-			if (className.contains(text) || (message != null && message.contains(text))) {
+			String normalizedMessage = message == null ? "" : message.toLowerCase();
+			if (className.contains(normalizedText) || normalizedMessage.contains(normalizedText)) {
 				return true;
 			}
 			current = current.getCause();
