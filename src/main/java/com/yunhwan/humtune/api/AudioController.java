@@ -1,7 +1,9 @@
 package com.yunhwan.humtune.api;
 
+import com.yunhwan.humtune.api.dto.AudioAnalysisResultResponse;
 import com.yunhwan.humtune.api.dto.AudioStatusResponse;
 import com.yunhwan.humtune.api.dto.AudioUploadResponse;
+import com.yunhwan.humtune.application.AudioAnalysisResultService;
 import com.yunhwan.humtune.application.AudioStatusService;
 import com.yunhwan.humtune.application.AudioUploadService;
 import org.springframework.http.HttpStatus;
@@ -18,10 +20,16 @@ public class AudioController {
 
 	private final AudioUploadService audioUploadService;
 	private final AudioStatusService audioStatusService;
+	private final AudioAnalysisResultService audioAnalysisResultService;
 
-	public AudioController(AudioUploadService audioUploadService, AudioStatusService audioStatusService) {
+	public AudioController(
+			AudioUploadService audioUploadService,
+			AudioStatusService audioStatusService,
+			AudioAnalysisResultService audioAnalysisResultService
+	) {
 		this.audioUploadService = audioUploadService;
 		this.audioStatusService = audioStatusService;
+		this.audioAnalysisResultService = audioAnalysisResultService;
 	}
 
 	@PostMapping("/api/audio")
@@ -33,5 +41,10 @@ public class AudioController {
 	@GetMapping("/api/audio/{audioId}")
 	public AudioStatusResponse getStatus(@PathVariable Long audioId) {
 		return audioStatusService.getStatus(audioId);
+	}
+
+	@GetMapping("/api/audio/{audioId}/result")
+	public AudioAnalysisResultResponse getResult(@PathVariable Long audioId) {
+		return audioAnalysisResultService.getResult(audioId);
 	}
 }
