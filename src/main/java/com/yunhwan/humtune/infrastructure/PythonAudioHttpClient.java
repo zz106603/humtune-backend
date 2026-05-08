@@ -2,6 +2,8 @@ package com.yunhwan.humtune.infrastructure;
 
 import com.yunhwan.humtune.application.PythonAudioAnalyzeResponse;
 import com.yunhwan.humtune.application.PythonAudioClient;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import org.apache.hc.client5.http.classic.HttpClient;
@@ -26,6 +28,7 @@ public class PythonAudioHttpClient implements PythonAudioClient {
 	private static final Logger log = LoggerFactory.getLogger(PythonAudioHttpClient.class);
 	private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(3);
 	private static final Duration RESPONSE_TIMEOUT = Duration.ofSeconds(30);
+	private static final int MAX_ERROR_BODY_BYTES = 4096;
 
 	private final RestClient restClient;
 	private final String baseUrl;
@@ -73,7 +76,7 @@ public class PythonAudioHttpClient implements PythonAudioClient {
 					.body(request)
 					.retrieve()
 					.onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), (httpRequest, response) -> {
-						String responseBody = new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8);
+						String responseBody = readLimitedErrorBody(response.getBody());
 						log.error(
 								"Python audio error response. status={}, headers={}, body={}",
 								response.getStatusCode(),
@@ -93,6 +96,17 @@ public class PythonAudioHttpClient implements PythonAudioClient {
 
 	private String normalizePath(String path) {
 		return path.replace("\\", "/");
+	}
+
+	private String readLimitedErrorBody(InputStream inputStream) throws IOException {
+		byte[] buffer = inputStream.readNBytes(MAX_ERROR_BODY_BYTES + 1);
+		boolean truncated = buffer.length > MAX_ERROR_BODY_BYTES;
+		int length = truncated ? MAX_ERROR_BODY_BYTES : buffer.length;
+		String body = new String(buffer, 0, length, StandardCharsets.UTF_8);
+		if (truncated) {
+			return body + "...[truncated]";
+		}
+		return body;
 	}
 
 	private HttpComponentsClientHttpRequestFactory createHttpRequestFactory() {
