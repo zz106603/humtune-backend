@@ -31,13 +31,34 @@ public class AudioAnalysisProcessor {
 									command.rawAudioPath(),
 									command.outputDirectory()
 							);
-							pythonAudioClient.analyze(
-									command.audioId(),
-									command.rawAudioPath(),
-									command.outputDirectory()
-							);
+							try {
+								pythonAudioClient.analyze(
+										command.audioId(),
+										command.rawAudioPath(),
+										command.outputDirectory()
+								);
+								audioAnalysisPreparationService.markCompleted(analysisRequestId);
+							} catch (RuntimeException ex) {
+								log.warn(
+										"Python audio analysis failed. analysisRequestId={}, audioId={}",
+										analysisRequestId,
+										command.audioId(),
+										ex
+								);
+								audioAnalysisPreparationService.markFailed(
+										analysisRequestId,
+										"Python audio analysis failed: " + failureMessage(ex)
+								);
+							}
 						},
 						() -> log.warn("AnalysisRequest not found. analysisRequestId={}", analysisRequestId)
 				);
+	}
+
+	private String failureMessage(RuntimeException ex) {
+		if (ex.getMessage() == null || ex.getMessage().isBlank()) {
+			return ex.getClass().getSimpleName();
+		}
+		return ex.getMessage();
 	}
 }

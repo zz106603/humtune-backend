@@ -1,5 +1,6 @@
 package com.yunhwan.humtune.application;
 
+import com.yunhwan.humtune.domain.analysis.AnalysisRequest;
 import com.yunhwan.humtune.domain.analysis.AnalysisRequestRepository;
 import com.yunhwan.humtune.domain.audio.AudioMeta;
 import java.util.Optional;
@@ -33,5 +34,17 @@ public class AudioAnalysisPreparationService {
 							outputDirectory
 					);
 				});
+	}
+
+	@Transactional
+	public void markCompleted(Long analysisRequestId) {
+		analysisRequestRepository.findById(analysisRequestId)
+				.ifPresent(AnalysisRequest::markCompleted);
+	}
+
+	@Transactional
+	public void markFailed(Long analysisRequestId, String errorMessage) {
+		analysisRequestRepository.findById(analysisRequestId)
+				.ifPresent(analysisRequest -> analysisRequest.markFailed(errorMessage));
 	}
 }

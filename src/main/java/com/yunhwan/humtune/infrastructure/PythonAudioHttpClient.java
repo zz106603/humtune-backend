@@ -18,6 +18,7 @@ import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 @Component
 public class PythonAudioHttpClient implements PythonAudioClient {
@@ -65,25 +66,29 @@ public class PythonAudioHttpClient implements PythonAudioClient {
 				request
 		);
 
-		return restClient.post()
-				.uri("/internal/audio/analyze")
-				.contentType(MediaType.APPLICATION_JSON)
-				.body(request)
-				.retrieve()
-				.onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), (httpRequest, response) -> {
-					String responseBody = new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8);
-					log.error(
-							"Python audio error response. status={}, headers={}, body={}",
-							response.getStatusCode(),
-							response.getHeaders(),
-							responseBody
-					);
-					throw new PythonAudioClientException("Python audio service returned "
-							+ response.getStatusCode()
-							+ ". body="
-							+ responseBody);
-				})
-				.body(PythonAudioAnalyzeResponse.class);
+		try {
+			return restClient.post()
+					.uri("/internal/audio/analyze")
+					.contentType(MediaType.APPLICATION_JSON)
+					.body(request)
+					.retrieve()
+					.onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), (httpRequest, response) -> {
+						String responseBody = new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8);
+						log.error(
+								"Python audio error response. status={}, headers={}, body={}",
+								response.getStatusCode(),
+								response.getHeaders(),
+								responseBody
+						);
+						throw new PythonAudioClientException("Python audio service returned "
+								+ response.getStatusCode()
+								+ ". body="
+								+ responseBody);
+					})
+					.body(PythonAudioAnalyzeResponse.class);
+		} catch (RestClientException ex) {
+			throw new PythonAudioClientException("Python audio service request failed: " + ex.getMessage(), ex);
+		}
 	}
 
 	private String normalizePath(String path) {
