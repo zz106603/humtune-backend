@@ -2,8 +2,13 @@ package com.yunhwan.humtune.infrastructure;
 
 import com.yunhwan.humtune.application.PythonAudioAnalyzeResponse;
 import com.yunhwan.humtune.application.PythonAudioClient;
+import com.yunhwan.humtune.infrastructure.PythonAudioClientException.FailureCategory;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.ConnectException;
+import java.net.NoRouteToHostException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import org.apache.hc.client5.http.classic.HttpClient;
@@ -83,15 +88,63 @@ public class PythonAudioHttpClient implements PythonAudioClient {
 								response.getHeaders(),
 								responseBody
 						);
-						throw new PythonAudioClientException("Python audio service returned "
-								+ response.getStatusCode()
-								+ ". body="
-								+ responseBody);
+						throw new PythonAudioClientException(
+								FailureCategory.PYTHON_HTTP_ERROR,
+								"Python audio service returned " + response.getStatusCode() + ". body=" + responseBody
+						);
 					})
 					.body(PythonAudioAnalyzeResponse.class);
 		} catch (RestClientException ex) {
-			throw new PythonAudioClientException("Python audio service request failed: " + ex.getMessage(), ex);
+			throw new PythonAudioClientException(
+					classifyFailure(ex),
+					"Python audio service request failed: " + safeMessage(ex),
+					ex
+			);
 		}
+	}
+
+	static FailureCategory classifyFailure(Throwable throwable) {
+		if (hasCause(throwable, SocketTimeoutException.class) || hasCauseNameContaining(throwable, "Timeout")) {
+			return FailureCategory.PYTHON_TIMEOUT;
+		}
+		if (hasCause(throwable, ConnectException.class)
+				|| hasCause(throwable, UnknownHostException.class)
+				|| hasCause(throwable, NoRouteToHostException.class)
+				|| hasCauseNameContaining(throwable, "ConnectException")) {
+			return FailureCategory.PYTHON_NETWORK_ERROR;
+		}
+		return FailureCategory.PYTHON_CLIENT_ERROR;
+	}
+
+	private static boolean hasCause(Throwable throwable, Class<? extends Throwable> targetType) {
+		Throwable current = throwable;
+		while (current != null) {
+			if (targetType.isInstance(current)) {
+				return true;
+			}
+			current = current.getCause();
+		}
+		return false;
+	}
+
+	private static boolean hasCauseNameContaining(Throwable throwable, String text) {
+		Throwable current = throwable;
+		while (current != null) {
+			String className = current.getClass().getSimpleName();
+			String message = current.getMessage();
+			if (className.contains(text) || (message != null && message.contains(text))) {
+				return true;
+			}
+			current = current.getCause();
+		}
+		return false;
+	}
+
+	private String safeMessage(Throwable throwable) {
+		if (throwable.getMessage() == null || throwable.getMessage().isBlank()) {
+			return throwable.getClass().getSimpleName();
+		}
+		return throwable.getMessage();
 	}
 
 	private String normalizePath(String path) {
