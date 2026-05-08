@@ -11,13 +11,16 @@ public class AudioAnalysisProcessor {
 	private static final Logger log = LoggerFactory.getLogger(AudioAnalysisProcessor.class);
 
 	private final AudioAnalysisPreparationService audioAnalysisPreparationService;
+	private final AudioAnalysisResultService audioAnalysisResultService;
 	private final PythonAudioClient pythonAudioClient;
 
 	public AudioAnalysisProcessor(
 			AudioAnalysisPreparationService audioAnalysisPreparationService,
+			AudioAnalysisResultService audioAnalysisResultService,
 			PythonAudioClient pythonAudioClient
 	) {
 		this.audioAnalysisPreparationService = audioAnalysisPreparationService;
+		this.audioAnalysisResultService = audioAnalysisResultService;
 		this.pythonAudioClient = pythonAudioClient;
 	}
 
@@ -33,12 +36,12 @@ public class AudioAnalysisProcessor {
 									command.outputDirectory()
 							);
 							try {
-								pythonAudioClient.analyze(
+								PythonAudioAnalyzeResponse response = pythonAudioClient.analyze(
 										command.audioId(),
 										command.rawAudioPath(),
 										command.outputDirectory()
 								);
-								audioAnalysisPreparationService.markCompleted(analysisRequestId);
+								audioAnalysisResultService.completeWithResult(analysisRequestId, response);
 							} catch (RuntimeException ex) {
 								log.warn(
 										"Python audio analysis failed. analysisRequestId={}, audioId={}",
