@@ -11,6 +11,7 @@ import com.yunhwan.humtune.domain.analysis.AnalysisResultRepository;
 import com.yunhwan.humtune.domain.analysis.AnalysisStatus;
 import com.yunhwan.humtune.domain.audio.AudioMeta;
 import java.nio.file.Path;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,15 +23,18 @@ public class AudioAnalysisResultService {
 	private final AnalysisRequestRepository analysisRequestRepository;
 	private final AnalysisResultRepository analysisResultRepository;
 	private final ObjectMapper objectMapper;
+	private final Path outputDirectory;
 
 	public AudioAnalysisResultService(
 			AnalysisRequestRepository analysisRequestRepository,
 			AnalysisResultRepository analysisResultRepository,
-			ObjectMapper objectMapper
+			ObjectMapper objectMapper,
+			@Value("${humtune.audio.output-directory:storage/midi}") Path outputDirectory
 	) {
 		this.analysisRequestRepository = analysisRequestRepository;
 		this.analysisResultRepository = analysisResultRepository;
 		this.objectMapper = objectMapper;
+		this.outputDirectory = outputDirectory;
 	}
 
 	@Transactional
@@ -45,19 +49,16 @@ public class AudioAnalysisResultService {
 						analysisRequest.markFailed("Python audio service returned incomplete result");
 						return;
 					}
-					analysisResultRepository.save(new AnalysisResult(
-							analysisRequest,
-							response.detectedScale(),
-							response.keyConfidence(),
-							writeJson(response.originalNotes()),
-							writeJson(response.adjustedNotes()),
-							writeJson(response.chords()),
-							toStoredPath(response.midiPath()),
-							response.processingTimeMs(),
-							null,
-							null,
-							null
-					));
+					analysisResultRepository.save(AnalysisResult.builder()
+							.analysisRequest(analysisRequest)
+							.detectedScale(response.detectedScale())
+							.keyConfidence(response.keyConfidence())
+							.originalNotesJson(writeJson(response.originalNotes()))
+							.adjustedNotesJson(writeJson(response.adjustedNotes()))
+							.chordsJson(writeJson(response.chords()))
+							.midiPath(toStoredPath(response.midiPath()))
+							.processingTimeMs(response.processingTimeMs())
+							.build());
 					analysisRequest.markCompleted();
 				});
 	}
@@ -131,13 +132,21 @@ public class AudioAnalysisResultService {
 	private String toStoredPath(String path) {
 		Path midiPath = Path.of(path).normalize();
 		if (!midiPath.isAbsolute()) {
-			return midiPath.toString();
+			return normalizeSeparators(midiPath);
+		}
+		Path absoluteOutputDirectory = outputDirectory.toAbsolutePath().normalize();
+		if (midiPath.startsWith(absoluteOutputDirectory)) {
+			return normalizeSeparators(outputDirectory.normalize().resolve(absoluteOutputDirectory.relativize(midiPath)));
 		}
 		Path workingDirectory = Path.of("").toAbsolutePath().normalize();
 		if (midiPath.startsWith(workingDirectory)) {
-			return workingDirectory.relativize(midiPath).toString();
+			return normalizeSeparators(workingDirectory.relativize(midiPath));
 		}
-		return Path.of("storage", "midi", midiPath.getFileName().toString()).toString();
+		return normalizeSeparators(outputDirectory.resolve(midiPath.getFileName()).normalize());
+	}
+
+	private String normalizeSeparators(Path path) {
+		return path.toString().replace("\\", "/");
 	}
 
 	private String safeErrorMessage(String errorMessage) {

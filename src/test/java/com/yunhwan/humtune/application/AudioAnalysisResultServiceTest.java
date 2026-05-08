@@ -43,7 +43,8 @@ class AudioAnalysisResultServiceTest {
 		audioAnalysisResultService = new AudioAnalysisResultService(
 				analysisRequestRepository,
 				analysisResultRepository,
-				objectMapper
+				objectMapper,
+				Path.of("storage/midi")
 		);
 	}
 
@@ -130,19 +131,16 @@ class AudioAnalysisResultServiceTest {
 	@Test
 	void COMPLETED_결과를_조회한다() throws Exception {
 		AnalysisRequest analysisRequest = completedAnalysisRequest();
-		AnalysisResult result = new AnalysisResult(
-				analysisRequest,
-				"C_MAJOR",
-				0.9,
-				"[{\"pitch\":60}]",
-				"[{\"pitch\":62}]",
-				"[{\"name\":\"C\"}]",
-				"storage/midi/sample.mid",
-				123L,
-				null,
-				null,
-				null
-		);
+		AnalysisResult result = AnalysisResult.builder()
+				.analysisRequest(analysisRequest)
+				.detectedScale("C_MAJOR")
+				.keyConfidence(0.9)
+				.originalNotesJson("[{\"pitch\":60}]")
+				.adjustedNotesJson("[{\"pitch\":62}]")
+				.chordsJson("[{\"name\":\"C\"}]")
+				.midiPath("storage/midi/sample.mid")
+				.processingTimeMs(123L)
+				.build();
 		when(analysisRequestRepository.findByAudioMeta_AudioId(1L)).thenReturn(Optional.of(analysisRequest));
 		when(analysisResultRepository.findByAnalysisRequest(analysisRequest)).thenReturn(Optional.of(result));
 
