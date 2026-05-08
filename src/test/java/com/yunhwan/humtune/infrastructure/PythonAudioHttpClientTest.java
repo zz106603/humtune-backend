@@ -118,6 +118,30 @@ class PythonAudioHttpClientTest {
 	}
 
 	@Test
+	void Python_오디오_서비스_오류_body는_제한된_길이로_전파한다() throws Exception {
+		HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+		server.createContext("/internal/audio/analyze", exchange -> {
+			byte[] response = "x".repeat(5000).getBytes(StandardCharsets.UTF_8);
+			exchange.sendResponseHeaders(500, response.length);
+			exchange.getResponseBody().write(response);
+			exchange.close();
+		});
+		server.start();
+
+		try {
+			String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
+			PythonAudioHttpClient client = new PythonAudioHttpClient(RestClient.builder(), baseUrl);
+
+			assertThatThrownBy(() -> client.analyze(9L, "build/audio-uploads/test.m4a", "build/audio-outputs"))
+					.isInstanceOf(PythonAudioClientException.class)
+					.hasMessageContaining("...[truncated]")
+					.hasMessageNotContaining("x".repeat(5000));
+		} finally {
+			server.stop(0);
+		}
+	}
+
+	@Test
 	void Python_오디오_서비스_네트워크_오류는_전용_예외로_전파한다() throws Exception {
 		int unusedPort;
 		try (ServerSocket socket = new ServerSocket(0)) {

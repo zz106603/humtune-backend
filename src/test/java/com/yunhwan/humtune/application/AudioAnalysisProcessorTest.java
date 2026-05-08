@@ -86,6 +86,24 @@ class AudioAnalysisProcessorTest {
 	}
 
 	@Test
+	void Python_서비스_실패_메시지가_null이면_예외_클래스명을_저장한다() {
+		when(audioAnalysisPreparationService.markProcessing(2L))
+				.thenReturn(Optional.of(new PythonAudioAnalysisCommand(
+						1L,
+						"build/audio-uploads/sample.wav",
+						"build/audio-outputs"
+				)));
+		doThrow(new RuntimeException())
+				.when(pythonAudioClient)
+				.analyze(1L, "build/audio-uploads/sample.wav", "build/audio-outputs");
+
+		audioAnalysisProcessor.process(2L);
+
+		verify(audioAnalysisPreparationService).markFailed(eq(2L), contains("RuntimeException"));
+		verify(audioAnalysisPreparationService, never()).markFailed(eq(2L), contains("null"));
+	}
+
+	@Test
 	void process는_트랜잭션_메서드가_아니다() throws Exception {
 		Method process = AudioAnalysisProcessor.class.getMethod("process", Long.class);
 
