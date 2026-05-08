@@ -1,5 +1,6 @@
 package com.yunhwan.humtune.application;
 
+import com.yunhwan.humtune.infrastructure.PythonAudioClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -47,7 +48,7 @@ public class AudioAnalysisProcessor {
 								);
 								audioAnalysisPreparationService.markFailed(
 										analysisRequestId,
-										"Python audio analysis failed: " + failureMessage(ex)
+										failureMessage(ex)
 								);
 							}
 						},
@@ -56,9 +57,14 @@ public class AudioAnalysisProcessor {
 	}
 
 	private String failureMessage(RuntimeException ex) {
-		if (ex.getMessage() == null || ex.getMessage().isBlank()) {
-			return ex.getClass().getSimpleName();
+		if (ex instanceof PythonAudioClientException pythonAudioClientException) {
+			return switch (pythonAudioClientException.getFailureCategory()) {
+				case PYTHON_TIMEOUT -> "Python audio service timed out";
+				case PYTHON_NETWORK_ERROR -> "Python audio service unavailable";
+				case PYTHON_HTTP_ERROR -> "Python audio service returned an error";
+				case PYTHON_CLIENT_ERROR -> "Python audio service failed";
+			};
 		}
-		return ex.getMessage();
+		return "Audio analysis failed";
 	}
 }
