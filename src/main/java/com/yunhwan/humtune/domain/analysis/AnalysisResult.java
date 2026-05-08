@@ -33,6 +33,13 @@ public class AnalysisResult {
 	@Column(name = "detected_scale", nullable = false, length = 50)
 	private String detectedScale;
 
+	@Column(name = "key_confidence")
+	private Double keyConfidence;
+
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "original_notes_json", nullable = false, columnDefinition = "jsonb")
+	private String originalNotesJson;
+
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(name = "adjusted_notes_json", nullable = false, columnDefinition = "jsonb")
 	private String adjustedNotesJson;
@@ -43,6 +50,9 @@ public class AnalysisResult {
 
 	@Column(name = "midi_path", nullable = false, length = 1024)
 	private String midiPath;
+
+	@Column(name = "processing_time_ms")
+	private Long processingTimeMs;
 
 	@Column(name = "feedback_text", columnDefinition = "text")
 	private String feedbackText;
@@ -64,18 +74,24 @@ public class AnalysisResult {
 	public AnalysisResult(
 			AnalysisRequest analysisRequest,
 			String detectedScale,
+			Double keyConfidence,
+			String originalNotesJson,
 			String adjustedNotesJson,
 			String chordsJson,
 			String midiPath,
+			Long processingTimeMs,
 			String feedbackText,
 			String chordExplanation,
 			Double naturalnessScore
 	) {
 		this.analysisRequest = analysisRequest;
 		this.detectedScale = detectedScale;
+		this.keyConfidence = keyConfidence;
+		this.originalNotesJson = originalNotesJson;
 		this.adjustedNotesJson = adjustedNotesJson;
 		this.chordsJson = chordsJson;
 		this.midiPath = midiPath;
+		this.processingTimeMs = processingTimeMs;
 		this.feedbackText = feedbackText;
 		this.chordExplanation = chordExplanation;
 		this.naturalnessScore = naturalnessScore;
@@ -93,6 +109,14 @@ public class AnalysisResult {
 		return detectedScale;
 	}
 
+	public Double getKeyConfidence() {
+		return keyConfidence;
+	}
+
+	public String getOriginalNotesJson() {
+		return originalNotesJson;
+	}
+
 	public String getAdjustedNotesJson() {
 		return adjustedNotesJson;
 	}
@@ -103,6 +127,10 @@ public class AnalysisResult {
 
 	public String getMidiPath() {
 		return midiPath;
+	}
+
+	public Long getProcessingTimeMs() {
+		return processingTimeMs;
 	}
 
 	public String getFeedbackText() {

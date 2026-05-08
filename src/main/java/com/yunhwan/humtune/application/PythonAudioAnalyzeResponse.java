@@ -10,6 +10,7 @@ public record PythonAudioAnalyzeResponse(
 		JsonNode adjustedNotes,
 		JsonNode chords,
 		String midiPath,
-		Long processingTimeMs
+		Long processingTimeMs,
+		String errorMessage
 ) {
 }
