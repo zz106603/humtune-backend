@@ -3,8 +3,14 @@ package com.yunhwan.humtune.infrastructure;
 import com.yunhwan.humtune.application.PythonAudioAnalyzeResponse;
 import com.yunhwan.humtune.application.PythonAudioClient;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import org.apache.hc.client5.http.classic.HttpClient;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.core5.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +23,8 @@ import org.springframework.web.client.RestClient;
 public class PythonAudioHttpClient implements PythonAudioClient {
 
 	private static final Logger log = LoggerFactory.getLogger(PythonAudioHttpClient.class);
+	private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(3);
+	private static final Duration RESPONSE_TIMEOUT = Duration.ofSeconds(30);
 
 	private final RestClient restClient;
 	private final String baseUrl;
@@ -70,7 +78,7 @@ public class PythonAudioHttpClient implements PythonAudioClient {
 							response.getHeaders(),
 							responseBody
 					);
-					throw new IllegalStateException("Python audio service returned "
+					throw new PythonAudioClientException("Python audio service returned "
 							+ response.getStatusCode()
 							+ ". body="
 							+ responseBody);
@@ -83,7 +91,19 @@ public class PythonAudioHttpClient implements PythonAudioClient {
 	}
 
 	private HttpComponentsClientHttpRequestFactory createHttpRequestFactory() {
-		HttpClient httpClient = HttpClients.custom().build();
+		ConnectionConfig connectionConfig = ConnectionConfig.custom()
+				.setConnectTimeout(Timeout.of(CONNECT_TIMEOUT))
+				.build();
+		RequestConfig requestConfig = RequestConfig.custom()
+				.setResponseTimeout(Timeout.of(RESPONSE_TIMEOUT))
+				.build();
+		PoolingHttpClientConnectionManager connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
+				.setDefaultConnectionConfig(connectionConfig)
+				.build();
+		HttpClient httpClient = HttpClients.custom()
+				.setConnectionManager(connectionManager)
+				.setDefaultRequestConfig(requestConfig)
+				.build();
 		return new HttpComponentsClientHttpRequestFactory(httpClient);
 	}
 }
