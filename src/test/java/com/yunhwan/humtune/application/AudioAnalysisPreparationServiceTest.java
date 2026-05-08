@@ -7,8 +7,10 @@ import com.yunhwan.humtune.domain.analysis.AnalysisRequest;
 import com.yunhwan.humtune.domain.analysis.AnalysisRequestRepository;
 import com.yunhwan.humtune.domain.analysis.AnalysisStatus;
 import com.yunhwan.humtune.domain.audio.AudioMeta;
+import com.yunhwan.humtune.infrastructure.LocalAudioStorage;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.file.Path;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,22 +25,29 @@ class AudioAnalysisPreparationServiceTest {
 	@Mock
 	private AnalysisRequestRepository analysisRequestRepository;
 
+	@Mock
+	private LocalAudioStorage localAudioStorage;
+
 	private AudioAnalysisPreparationService audioAnalysisPreparationService;
 
 	@BeforeEach
 	void setUp() {
 		audioAnalysisPreparationService = new AudioAnalysisPreparationService(
 				analysisRequestRepository,
-				"build/audio-outputs"
+				localAudioStorage,
+				Path.of("storage/midi")
 		);
 	}
 
 	@Test
 	void 분석요청을_PROCESSING으로_변경하고_Python_호출_데이터를_반환한다() throws Exception {
-		AudioMeta audioMeta = new AudioMeta("sample.wav", "audio/wav", 5L, "build/audio-uploads/sample.wav");
+		AudioMeta audioMeta = new AudioMeta("sample.wav", "audio/wav", 5L, "storage/raw/sample.wav");
 		setField(audioMeta, "audioId", 1L);
 		AnalysisRequest analysisRequest = new AnalysisRequest(audioMeta);
 		when(analysisRequestRepository.findById(2L)).thenReturn(Optional.of(analysisRequest));
+		when(localAudioStorage.resolveForRead("storage/raw/sample.wav"))
+				.thenReturn("/workspace/humtune-backend/storage/raw/sample.wav");
+		String expectedOutputDirectory = Path.of("storage/midi").toAbsolutePath().normalize().toString();
 
 		Optional<PythonAudioAnalysisCommand> command = audioAnalysisPreparationService.markProcessing(2L);
 
@@ -47,8 +56,8 @@ class AudioAnalysisPreparationServiceTest {
 		assertThat(analysisRequest.getErrorMessage()).isNull();
 		assertThat(command).contains(new PythonAudioAnalysisCommand(
 				1L,
-				"build/audio-uploads/sample.wav",
-				"build/audio-outputs"
+				"/workspace/humtune-backend/storage/raw/sample.wav",
+				expectedOutputDirectory
 		));
 	}
 
@@ -62,7 +71,7 @@ class AudioAnalysisPreparationServiceTest {
 	@Test
 	void 분석요청을_COMPLETED로_변경한다() {
 		AnalysisRequest analysisRequest = new AnalysisRequest(
-				new AudioMeta("sample.wav", "audio/wav", 5L, "build/audio-uploads/sample.wav")
+				new AudioMeta("sample.wav", "audio/wav", 5L, "storage/raw/sample.wav")
 		);
 		analysisRequest.markProcessing();
 		when(analysisRequestRepository.findById(2L)).thenReturn(Optional.of(analysisRequest));
@@ -77,7 +86,7 @@ class AudioAnalysisPreparationServiceTest {
 	@Test
 	void 분석요청을_FAILED로_변경한다() {
 		AnalysisRequest analysisRequest = new AnalysisRequest(
-				new AudioMeta("sample.wav", "audio/wav", 5L, "build/audio-uploads/sample.wav")
+				new AudioMeta("sample.wav", "audio/wav", 5L, "storage/raw/sample.wav")
 		);
 		analysisRequest.markProcessing();
 		when(analysisRequestRepository.findById(2L)).thenReturn(Optional.of(analysisRequest));

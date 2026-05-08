@@ -51,7 +51,7 @@ class PythonAudioHttpClientTest {
 					  "originalNotes": [{"pitch": 60}],
 					  "adjustedNotes": [{"pitch": 62}],
 					  "chords": [{"name": "C"}],
-					  "midiPath": "build/audio-outputs/sample.mid",
+					  "midiPath": "storage/midi/sample.mid",
 					  "processingTimeMs": 123
 					}
 					""".getBytes(StandardCharsets.UTF_8);
@@ -66,7 +66,7 @@ class PythonAudioHttpClientTest {
 			String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
 			PythonAudioHttpClient client = new PythonAudioHttpClient(RestClient.builder(), baseUrl);
 
-			var response = client.analyze(9L, "build\\audio-uploads\\test.m4a", "build/audio-outputs");
+			var response = client.analyze(9L, "storage\\raw\\test.m4a", "storage/midi");
 
 			String rawBody = new String(bodyBytes.get(), StandardCharsets.UTF_8);
 			System.out.printf(
@@ -91,8 +91,8 @@ class PythonAudioHttpClientTest {
 			assertThat(rawBody).contains("audioId", "rawAudioPath", "outputDirectory");
 			assertThat(json.get("audioId").isTextual()).isTrue();
 			assertThat(json.get("audioId").asText()).isEqualTo("9");
-			assertThat(json.get("rawAudioPath").asText()).isEqualTo("build/audio-uploads/test.m4a");
-			assertThat(json.get("outputDirectory").asText()).isEqualTo("build/audio-outputs");
+			assertThat(json.get("rawAudioPath").asText()).isEqualTo("storage/raw/test.m4a");
+			assertThat(json.get("outputDirectory").asText()).isEqualTo("storage/midi");
 			assertThat(response.status()).isEqualTo("COMPLETED");
 		} finally {
 			server.stop(0);
@@ -115,7 +115,7 @@ class PythonAudioHttpClientTest {
 			PythonAudioHttpClient client = new PythonAudioHttpClient(RestClient.builder(), baseUrl);
 
 			assertThatExceptionOfType(PythonAudioClientException.class)
-					.isThrownBy(() -> client.analyze(9L, "build/audio-uploads/test.m4a", "build/audio-outputs"))
+					.isThrownBy(() -> client.analyze(9L, "storage/raw/test.m4a", "storage/midi"))
 					.satisfies(ex -> assertThat(ex.getFailureCategory()).isEqualTo(FailureCategory.PYTHON_HTTP_ERROR))
 					.withMessageContaining("Python audio service returned");
 		} finally {
@@ -138,7 +138,7 @@ class PythonAudioHttpClientTest {
 			String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
 			PythonAudioHttpClient client = new PythonAudioHttpClient(RestClient.builder(), baseUrl);
 
-			assertThatThrownBy(() -> client.analyze(9L, "build/audio-uploads/test.m4a", "build/audio-outputs"))
+			assertThatThrownBy(() -> client.analyze(9L, "storage/raw/test.m4a", "storage/midi"))
 					.isInstanceOf(PythonAudioClientException.class)
 					.hasMessageContaining("...[truncated]")
 					.hasMessageNotContaining("x".repeat(5000));
@@ -197,7 +197,7 @@ class PythonAudioHttpClientTest {
 		);
 
 		assertThatExceptionOfType(PythonAudioClientException.class)
-				.isThrownBy(() -> client.analyze(9L, "build/audio-uploads/test.m4a", "build/audio-outputs"))
+				.isThrownBy(() -> client.analyze(9L, "storage/raw/test.m4a", "storage/midi"))
 				.satisfies(ex -> assertThat(ex.getFailureCategory()).isEqualTo(FailureCategory.PYTHON_NETWORK_ERROR))
 				.withMessageContaining("Python audio service request failed");
 	}
