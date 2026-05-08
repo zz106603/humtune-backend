@@ -1,6 +1,7 @@
 package com.yunhwan.humtune.infrastructure;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -87,6 +88,29 @@ class PythonAudioHttpClientTest {
 			assertThat(json.get("rawAudioPath").asText()).isEqualTo("build/audio-uploads/test.m4a");
 			assertThat(json.get("outputDirectory").asText()).isEqualTo("build/audio-outputs");
 			assertThat(response.status()).isEqualTo("COMPLETED");
+		} finally {
+			server.stop(0);
+		}
+	}
+
+	@Test
+	void Python_오디오_서비스_오류는_전용_예외로_전파한다() throws Exception {
+		HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+		server.createContext("/internal/audio/analyze", exchange -> {
+			byte[] response = "invalid request".getBytes(StandardCharsets.UTF_8);
+			exchange.sendResponseHeaders(500, response.length);
+			exchange.getResponseBody().write(response);
+			exchange.close();
+		});
+		server.start();
+
+		try {
+			String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
+			PythonAudioHttpClient client = new PythonAudioHttpClient(RestClient.builder(), baseUrl);
+
+			assertThatThrownBy(() -> client.analyze(9L, "build/audio-uploads/test.m4a", "build/audio-outputs"))
+					.isInstanceOf(PythonAudioClientException.class)
+					.hasMessageContaining("Python audio service returned");
 		} finally {
 			server.stop(0);
 		}
