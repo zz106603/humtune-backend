@@ -15,7 +15,7 @@ public class LocalAudioStorage {
 
 	private final Path storageRoot;
 
-	public LocalAudioStorage(@Value("${humtune.audio.storage-path:build/audio-uploads}") Path storageRoot) {
+	public LocalAudioStorage(@Value("${humtune.audio.storage-path:storage/raw}") Path storageRoot) {
 		this.storageRoot = storageRoot;
 	}
 
@@ -28,6 +28,14 @@ public class LocalAudioStorage {
 		} catch (IOException ex) {
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store audio file", ex);
 		}
+	}
+
+	public String resolveForRead(String rawAudioPath) {
+		Path path = Path.of(rawAudioPath);
+		if (path.isAbsolute()) {
+			return path.normalize().toAbsolutePath().toString();
+		}
+		return path.toAbsolutePath().normalize().toString();
 	}
 
 	public void delete(String rawAudioPath) {

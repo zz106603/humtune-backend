@@ -19,4 +19,5 @@ audio-service:
 
 humtune:
   audio:
-    output-directory: ${HUMTUNE_AUDIO_OUTPUT_DIRECTORY:build/audio-outputs}
+    storage-path: ${HUMTUNE_AUDIO_STORAGE_PATH:storage/raw}
+    output-directory: ${HUMTUNE_AUDIO_OUTPUT_DIRECTORY:storage/midi}

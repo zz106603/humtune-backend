@@ -156,3 +156,5 @@ build/
 !.env.example
 
 .codex
+
+storage/*

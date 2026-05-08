@@ -3,6 +3,8 @@ package com.yunhwan.humtune.application;
 import com.yunhwan.humtune.domain.analysis.AnalysisRequest;
 import com.yunhwan.humtune.domain.analysis.AnalysisRequestRepository;
 import com.yunhwan.humtune.domain.audio.AudioMeta;
+import com.yunhwan.humtune.infrastructure.LocalAudioStorage;
+import java.nio.file.Path;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -12,13 +14,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class AudioAnalysisPreparationService {
 
 	private final AnalysisRequestRepository analysisRequestRepository;
-	private final String outputDirectory;
+	private final LocalAudioStorage localAudioStorage;
+	private final Path outputDirectory;
 
 	public AudioAnalysisPreparationService(
 			AnalysisRequestRepository analysisRequestRepository,
-			@Value("${humtune.audio.output-directory:build/audio-outputs}") String outputDirectory
+			LocalAudioStorage localAudioStorage,
+			@Value("${humtune.audio.output-directory:storage/midi}") Path outputDirectory
 	) {
 		this.analysisRequestRepository = analysisRequestRepository;
+		this.localAudioStorage = localAudioStorage;
 		this.outputDirectory = outputDirectory;
 	}
 
@@ -30,10 +35,14 @@ public class AudioAnalysisPreparationService {
 					AudioMeta audioMeta = analysisRequest.getAudioMeta();
 					return new PythonAudioAnalysisCommand(
 							audioMeta.getAudioId(),
-							audioMeta.getRawAudioPath(),
-							outputDirectory
+							localAudioStorage.resolveForRead(audioMeta.getRawAudioPath()),
+							resolveOutputDirectory()
 					);
 				});
+	}
+
+	private String resolveOutputDirectory() {
+		return outputDirectory.toAbsolutePath().normalize().toString();
 	}
 
 	@Transactional
