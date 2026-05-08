@@ -1,17 +1,22 @@
 package com.yunhwan.humtune.infrastructure;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
+import com.yunhwan.humtune.infrastructure.PythonAudioClientException.FailureCategory;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 class PythonAudioHttpClientTest {
 
@@ -109,9 +114,10 @@ class PythonAudioHttpClientTest {
 			String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
 			PythonAudioHttpClient client = new PythonAudioHttpClient(RestClient.builder(), baseUrl);
 
-			assertThatThrownBy(() -> client.analyze(9L, "build/audio-uploads/test.m4a", "build/audio-outputs"))
-					.isInstanceOf(PythonAudioClientException.class)
-					.hasMessageContaining("Python audio service returned");
+			assertThatExceptionOfType(PythonAudioClientException.class)
+					.isThrownBy(() -> client.analyze(9L, "build/audio-uploads/test.m4a", "build/audio-outputs"))
+					.satisfies(ex -> assertThat(ex.getFailureCategory()).isEqualTo(FailureCategory.PYTHON_HTTP_ERROR))
+					.withMessageContaining("Python audio service returned");
 		} finally {
 			server.stop(0);
 		}
@@ -142,6 +148,28 @@ class PythonAudioHttpClientTest {
 	}
 
 	@Test
+	void timeout_오류는_TIMEOUT으로_분류한다() {
+		RestClientException exception = new RestClientException(
+				"request failed",
+				new SocketTimeoutException("read timed out")
+		);
+
+		assertThat(PythonAudioHttpClient.classifyFailure(exception))
+				.isEqualTo(FailureCategory.PYTHON_TIMEOUT);
+	}
+
+	@Test
+	void connect_오류는_NETWORK_ERROR로_분류한다() {
+		RestClientException exception = new RestClientException(
+				"request failed",
+				new ConnectException("Connection refused")
+		);
+
+		assertThat(PythonAudioHttpClient.classifyFailure(exception))
+				.isEqualTo(FailureCategory.PYTHON_NETWORK_ERROR);
+	}
+
+	@Test
 	void Python_오디오_서비스_네트워크_오류는_전용_예외로_전파한다() throws Exception {
 		int unusedPort;
 		try (ServerSocket socket = new ServerSocket(0)) {
@@ -152,8 +180,9 @@ class PythonAudioHttpClientTest {
 				"http://127.0.0.1:" + unusedPort
 		);
 
-		assertThatThrownBy(() -> client.analyze(9L, "build/audio-uploads/test.m4a", "build/audio-outputs"))
-				.isInstanceOf(PythonAudioClientException.class)
-				.hasMessageContaining("Python audio service request failed");
+		assertThatExceptionOfType(PythonAudioClientException.class)
+				.isThrownBy(() -> client.analyze(9L, "build/audio-uploads/test.m4a", "build/audio-outputs"))
+				.satisfies(ex -> assertThat(ex.getFailureCategory()).isEqualTo(FailureCategory.PYTHON_NETWORK_ERROR))
+				.withMessageContaining("Python audio service request failed");
 	}
 }
