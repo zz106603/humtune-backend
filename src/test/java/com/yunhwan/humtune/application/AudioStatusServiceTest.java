@@ -33,7 +33,7 @@ class AudioStatusServiceTest {
 
 	@Test
 	void audioId로_오디오_메타데이터와_분석_상태를_조회한다() throws Exception {
-		AudioMeta audioMeta = new AudioMeta("sample.wav", "audio/wav", 5L, "build/audio-uploads/sample.wav");
+		AudioMeta audioMeta = new AudioMeta("sample.wav", "audio/wav", 5L, "storage/raw/sample.wav");
 		setField(audioMeta, "audioId", 1L);
 		setField(audioMeta, "createdAt", Instant.parse("2026-05-07T10:15:30Z"));
 		AnalysisRequest analysisRequest = new AnalysisRequest(audioMeta);
@@ -50,7 +50,7 @@ class AudioStatusServiceTest {
 
 	@Test
 	void 실패_상태이면_errorMessage를_포함한다() throws Exception {
-		AudioMeta audioMeta = new AudioMeta("sample.wav", "audio/wav", 5L, "build/audio-uploads/sample.wav");
+		AudioMeta audioMeta = new AudioMeta("sample.wav", "audio/wav", 5L, "storage/raw/sample.wav");
 		setField(audioMeta, "audioId", 1L);
 		setField(audioMeta, "createdAt", Instant.parse("2026-05-07T10:15:30Z"));
 		AnalysisRequest analysisRequest = new AnalysisRequest(audioMeta);

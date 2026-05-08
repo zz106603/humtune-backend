@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yunhwan.humtune.infrastructure.PythonAudioClientException;
 import com.yunhwan.humtune.infrastructure.PythonAudioClientException.FailureCategory;
 import java.lang.reflect.Method;
@@ -29,6 +30,9 @@ class AudioAnalysisProcessorTest {
 	private AudioAnalysisPreparationService audioAnalysisPreparationService;
 
 	@Mock
+	private AudioAnalysisResultService audioAnalysisResultService;
+
+	@Mock
 	private PythonAudioClient pythonAudioClient;
 
 	private AudioAnalysisProcessor audioAnalysisProcessor;
@@ -37,25 +41,40 @@ class AudioAnalysisProcessorTest {
 	void setUp() {
 		audioAnalysisProcessor = new AudioAnalysisProcessor(
 				audioAnalysisPreparationService,
+				audioAnalysisResultService,
 				pythonAudioClient
 		);
 	}
 
 	@Test
-	void PROCESSING_전환_후_Python_서비스를_호출하고_COMPLETED로_변경한다() {
+	void PROCESSING_전환_후_Python_서비스를_호출하고_분석결과를_저장한다() throws Exception {
+		ObjectMapper objectMapper = new ObjectMapper();
+		PythonAudioAnalyzeResponse response = new PythonAudioAnalyzeResponse(
+				"COMPLETED",
+				"C_MAJOR",
+				0.9,
+				objectMapper.readTree("[{\"pitch\":60}]"),
+				objectMapper.readTree("[{\"pitch\":62}]"),
+				objectMapper.readTree("[{\"name\":\"C\"}]"),
+				"storage/midi/sample.mid",
+				123L,
+				null
+		);
 		when(audioAnalysisPreparationService.markProcessing(2L))
 				.thenReturn(Optional.of(new PythonAudioAnalysisCommand(
 						1L,
-						"build/audio-uploads/sample.wav",
-						"build/audio-outputs"
+						"storage/raw/sample.wav",
+						"storage/midi"
 				)));
+		when(pythonAudioClient.analyze(1L, "storage/raw/sample.wav", "storage/midi"))
+				.thenReturn(response);
 
 		audioAnalysisProcessor.process(2L);
 
-		InOrder inOrder = inOrder(audioAnalysisPreparationService, pythonAudioClient);
+		InOrder inOrder = inOrder(audioAnalysisPreparationService, pythonAudioClient, audioAnalysisResultService);
 		inOrder.verify(audioAnalysisPreparationService).markProcessing(2L);
-		inOrder.verify(pythonAudioClient).analyze(1L, "build/audio-uploads/sample.wav", "build/audio-outputs");
-		inOrder.verify(audioAnalysisPreparationService).markCompleted(2L);
+		inOrder.verify(pythonAudioClient).analyze(1L, "storage/raw/sample.wav", "storage/midi");
+		inOrder.verify(audioAnalysisResultService).completeWithResult(2L, response);
 	}
 
 	@Test
@@ -65,6 +84,7 @@ class AudioAnalysisProcessorTest {
 		assertThatCode(() -> audioAnalysisProcessor.process(999L))
 				.doesNotThrowAnyException();
 		verifyNoInteractions(pythonAudioClient);
+		verifyNoInteractions(audioAnalysisResultService);
 	}
 
 	@Test
@@ -72,17 +92,17 @@ class AudioAnalysisProcessorTest {
 		when(audioAnalysisPreparationService.markProcessing(2L))
 				.thenReturn(Optional.of(new PythonAudioAnalysisCommand(
 						1L,
-						"build/audio-uploads/sample.wav",
-						"build/audio-outputs"
+						"storage/raw/sample.wav",
+						"storage/midi"
 				)));
 		doThrow(new PythonAudioClientException(FailureCategory.PYTHON_HTTP_ERROR, "Python audio service returned 500"))
 				.when(pythonAudioClient)
-				.analyze(1L, "build/audio-uploads/sample.wav", "build/audio-outputs");
+				.analyze(1L, "storage/raw/sample.wav", "storage/midi");
 
 		assertThatCode(() -> audioAnalysisProcessor.process(2L))
 				.doesNotThrowAnyException();
 
-		verify(audioAnalysisPreparationService, never()).markCompleted(2L);
+		verify(audioAnalysisResultService, never()).completeWithResult(eq(2L), org.mockito.ArgumentMatchers.any());
 		verify(audioAnalysisPreparationService).markFailed(eq(2L), eq("Python audio service returned an error"));
 	}
 
@@ -91,12 +111,12 @@ class AudioAnalysisProcessorTest {
 		when(audioAnalysisPreparationService.markProcessing(2L))
 				.thenReturn(Optional.of(new PythonAudioAnalysisCommand(
 						1L,
-						"build/audio-uploads/sample.wav",
-						"build/audio-outputs"
+						"storage/raw/sample.wav",
+						"storage/midi"
 				)));
 		doThrow(new PythonAudioClientException(FailureCategory.PYTHON_TIMEOUT, "read timed out"))
 				.when(pythonAudioClient)
-				.analyze(1L, "build/audio-uploads/sample.wav", "build/audio-outputs");
+				.analyze(1L, "storage/raw/sample.wav", "storage/midi");
 
 		audioAnalysisProcessor.process(2L);
 
@@ -108,12 +128,12 @@ class AudioAnalysisProcessorTest {
 		when(audioAnalysisPreparationService.markProcessing(2L))
 				.thenReturn(Optional.of(new PythonAudioAnalysisCommand(
 						1L,
-						"build/audio-uploads/sample.wav",
-						"build/audio-outputs"
+						"storage/raw/sample.wav",
+						"storage/midi"
 				)));
 		doThrow(new PythonAudioClientException(FailureCategory.PYTHON_NETWORK_ERROR, "connection refused"))
 				.when(pythonAudioClient)
-				.analyze(1L, "build/audio-uploads/sample.wav", "build/audio-outputs");
+				.analyze(1L, "storage/raw/sample.wav", "storage/midi");
 
 		audioAnalysisProcessor.process(2L);
 
@@ -125,12 +145,12 @@ class AudioAnalysisProcessorTest {
 		when(audioAnalysisPreparationService.markProcessing(2L))
 				.thenReturn(Optional.of(new PythonAudioAnalysisCommand(
 						1L,
-						"build/audio-uploads/sample.wav",
-						"build/audio-outputs"
+						"storage/raw/sample.wav",
+						"storage/midi"
 				)));
 		doThrow(new PythonAudioClientException(FailureCategory.PYTHON_CLIENT_ERROR, "unexpected client failure"))
 				.when(pythonAudioClient)
-				.analyze(1L, "build/audio-uploads/sample.wav", "build/audio-outputs");
+				.analyze(1L, "storage/raw/sample.wav", "storage/midi");
 
 		audioAnalysisProcessor.process(2L);
 
@@ -142,12 +162,12 @@ class AudioAnalysisProcessorTest {
 		when(audioAnalysisPreparationService.markProcessing(2L))
 				.thenReturn(Optional.of(new PythonAudioAnalysisCommand(
 						1L,
-						"build/audio-uploads/sample.wav",
-						"build/audio-outputs"
+						"storage/raw/sample.wav",
+						"storage/midi"
 				)));
 		doThrow(new RuntimeException())
 				.when(pythonAudioClient)
-				.analyze(1L, "build/audio-uploads/sample.wav", "build/audio-outputs");
+				.analyze(1L, "storage/raw/sample.wav", "storage/midi");
 
 		audioAnalysisProcessor.process(2L);
 

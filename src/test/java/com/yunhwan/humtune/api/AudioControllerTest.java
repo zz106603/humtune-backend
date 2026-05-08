@@ -9,8 +9,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yunhwan.humtune.api.dto.AudioAnalysisResultResponse;
 import com.yunhwan.humtune.api.dto.AudioStatusResponse;
 import com.yunhwan.humtune.api.dto.AudioUploadResponse;
+import com.yunhwan.humtune.application.AudioAnalysisResultService;
 import com.yunhwan.humtune.application.AudioStatusService;
 import com.yunhwan.humtune.application.AudioUploadService;
 import com.yunhwan.humtune.domain.analysis.AnalysisStatus;
@@ -36,6 +39,9 @@ class AudioControllerTest {
 
 	@MockitoBean
 	private AudioStatusService audioStatusService;
+
+	@MockitoBean
+	private AudioAnalysisResultService audioAnalysisResultService;
 
 	@MockitoBean
 	private JpaMetamodelMappingContext jpaMetamodelMappingContext;
@@ -103,6 +109,67 @@ class AudioControllerTest {
 				.thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Audio not found"));
 
 		mockMvc.perform(get("/api/audio/{audioId}", 999L))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void 완료된_오디오_분석결과를_조회한다() throws Exception {
+		ObjectMapper objectMapper = new ObjectMapper();
+		when(audioAnalysisResultService.getResult(eq(1L))).thenReturn(new AudioAnalysisResultResponse(
+				1L,
+				AnalysisStatus.COMPLETED,
+				"C_MAJOR",
+				0.9,
+				objectMapper.readTree("[{\"pitch\":60}]"),
+				objectMapper.readTree("[{\"pitch\":62}]"),
+				objectMapper.readTree("[{\"name\":\"C\"}]"),
+				"storage/midi/sample.mid",
+				123L,
+				null
+		));
+
+		mockMvc.perform(get("/api/audio/{audioId}/result", 1L))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.audioId").value(1))
+				.andExpect(jsonPath("$.status").value("COMPLETED"))
+				.andExpect(jsonPath("$.detectedScale").value("C_MAJOR"))
+				.andExpect(jsonPath("$.keyConfidence").value(0.9))
+				.andExpect(jsonPath("$.originalNotes[0].pitch").value(60))
+				.andExpect(jsonPath("$.adjustedNotes[0].pitch").value(62))
+				.andExpect(jsonPath("$.chords[0].name").value("C"))
+				.andExpect(jsonPath("$.midiPath").value("storage/midi/sample.mid"))
+				.andExpect(jsonPath("$.processingTimeMs").value(123))
+				.andExpect(jsonPath("$.errorMessage").value(nullValue()));
+	}
+
+	@Test
+	void 실패한_오디오_분석결과_조회시_errorMessage를_반환한다() throws Exception {
+		when(audioAnalysisResultService.getResult(eq(1L))).thenReturn(new AudioAnalysisResultResponse(
+				1L,
+				AnalysisStatus.FAILED,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				"Python audio service timed out"
+		));
+
+		mockMvc.perform(get("/api/audio/{audioId}/result", 1L))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("FAILED"))
+				.andExpect(jsonPath("$.detectedScale").value(nullValue()))
+				.andExpect(jsonPath("$.errorMessage").value("Python audio service timed out"));
+	}
+
+	@Test
+	void 없는_오디오_분석결과_조회시_404를_반환한다() throws Exception {
+		when(audioAnalysisResultService.getResult(eq(999L)))
+				.thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Audio not found"));
+
+		mockMvc.perform(get("/api/audio/{audioId}/result", 999L))
 				.andExpect(status().isNotFound());
 	}
 }
