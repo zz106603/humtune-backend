@@ -137,7 +137,7 @@ Spring은 Python 호출 실패, timeout, HTTP 오류, 필수 결과 누락을 `F
 
 - `AudioMeta`: 원본 파일명, content type, 파일 크기, raw audio path, 생성 시각
 - `AnalysisRequest`: 분석 요청 상태, 요청/시작/완료/실패 시각, 오류 메시지
-- `AnalysisResult`: detected scale, confidence, original/adjusted notes JSON, chords JSON, MIDI path, processing time
+- `AnalysisResult`: detected scale, confidence, original/adjusted notes JSON, chords JSON, MIDI path, processing time, 설명/피드백용 `feedbackText`, `chordExplanation`, `naturalnessScore`
 
 ## API Summary
 
@@ -206,7 +206,7 @@ Request:
 
 ```json
 {
-  "audioId": 1,
+  "audioId": "1",
   "rawAudioPath": "/absolute/path/to/storage/raw/sample.wav",
   "outputDirectory": "/absolute/path/to/storage/midi"
 }
