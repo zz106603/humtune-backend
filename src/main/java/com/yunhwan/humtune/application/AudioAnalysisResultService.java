@@ -10,9 +10,13 @@ import com.yunhwan.humtune.domain.analysis.AnalysisResult;
 import com.yunhwan.humtune.domain.analysis.AnalysisResultRepository;
 import com.yunhwan.humtune.domain.analysis.AnalysisStatus;
 import com.yunhwan.humtune.domain.audio.AudioMeta;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import org.springframework.core.io.PathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -57,6 +61,7 @@ public class AudioAnalysisResultService {
 							.adjustedNotesJson(writeJson(response.adjustedNotes()))
 							.chordsJson(writeJson(response.chords()))
 							.midiPath(toStoredPath(response.midiPath()))
+							.previewAudioPath(toStoredPathOrNull(response.previewAudioPath()))
 							.processingTimeMs(response.processingTimeMs())
 							.build());
 					analysisRequest.markCompleted();
@@ -84,6 +89,7 @@ public class AudioAnalysisResultService {
 						readJson(result.getAdjustedNotesJson()),
 						readJson(result.getChordsJson()),
 						result.getMidiPath(),
+						result.getPreviewAudioPath(),
 						result.getProcessingTimeMs(),
 						null
 				))
@@ -101,8 +107,24 @@ public class AudioAnalysisResultService {
 				null,
 				null,
 				null,
+				null,
 				errorMessage
 		);
+	}
+
+	@Transactional(readOnly = true)
+	public ResultFile getMidiFile(Long audioId) {
+		AnalysisResult result = completedResult(audioId);
+		return resolveResultFile(result.getMidiPath(), MediaType.APPLICATION_OCTET_STREAM, "MIDI file not found");
+	}
+
+	@Transactional(readOnly = true)
+	public ResultFile getPreviewFile(Long audioId) {
+		AnalysisResult result = completedResult(audioId);
+		if (isBlank(result.getPreviewAudioPath())) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Preview audio file not found");
+		}
+		return resolveResultFile(result.getPreviewAudioPath(), MediaType.parseMediaType("audio/wav"), "Preview audio file not found");
 	}
 
 	private String writeJson(JsonNode jsonNode) {
@@ -130,19 +152,64 @@ public class AudioAnalysisResultService {
 	}
 
 	private String toStoredPath(String path) {
-		Path midiPath = Path.of(path).normalize();
-		if (!midiPath.isAbsolute()) {
-			return normalizeSeparators(midiPath);
+		Path resultPath = Path.of(path).normalize();
+		if (!resultPath.isAbsolute()) {
+			return normalizeSeparators(resultPath);
 		}
 		Path absoluteOutputDirectory = outputDirectory.toAbsolutePath().normalize();
-		if (midiPath.startsWith(absoluteOutputDirectory)) {
-			return normalizeSeparators(outputDirectory.normalize().resolve(absoluteOutputDirectory.relativize(midiPath)));
+		if (resultPath.startsWith(absoluteOutputDirectory)) {
+			return normalizeSeparators(outputDirectory.normalize().resolve(absoluteOutputDirectory.relativize(resultPath)));
 		}
 		Path workingDirectory = Path.of("").toAbsolutePath().normalize();
-		if (midiPath.startsWith(workingDirectory)) {
-			return normalizeSeparators(workingDirectory.relativize(midiPath));
+		if (resultPath.startsWith(workingDirectory)) {
+			return normalizeSeparators(workingDirectory.relativize(resultPath));
 		}
-		return normalizeSeparators(outputDirectory.resolve(midiPath.getFileName()).normalize());
+		return normalizeSeparators(outputDirectory.resolve(resultPath.getFileName()).normalize());
+	}
+
+	private String toStoredPathOrNull(String path) {
+		if (isBlank(path)) {
+			return null;
+		}
+		return toStoredPath(path);
+	}
+
+	private AnalysisResult completedResult(Long audioId) {
+		AnalysisRequest analysisRequest = analysisRequestRepository.findByAudioMeta_AudioId(audioId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Audio not found"));
+		if (analysisRequest.getStatus() != AnalysisStatus.COMPLETED) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Analysis result not found");
+		}
+		return analysisResultRepository.findByAnalysisRequest(analysisRequest)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Analysis result not found"));
+	}
+
+	private ResultFile resolveResultFile(String storedPath, MediaType mediaType, String missingMessage) {
+		Path resolvedPath = resolveInsideOutputDirectory(storedPath);
+		if (!Files.isRegularFile(resolvedPath)) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, missingMessage);
+		}
+		return new ResultFile(new PathResource(resolvedPath), mediaType, resolvedPath.getFileName().toString());
+	}
+
+	private Path resolveInsideOutputDirectory(String storedPath) {
+		Path outputRoot = outputDirectory.toAbsolutePath().normalize();
+		Path path = Path.of(storedPath).normalize();
+		Path resolvedPath;
+		if (path.isAbsolute()) {
+			resolvedPath = path.toAbsolutePath().normalize();
+		} else {
+			Path relativeToWorkingDirectory = path.toAbsolutePath().normalize();
+			if (relativeToWorkingDirectory.startsWith(outputRoot)) {
+				resolvedPath = relativeToWorkingDirectory;
+			} else {
+				resolvedPath = outputRoot.resolve(path).normalize();
+			}
+		}
+		if (!resolvedPath.startsWith(outputRoot)) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Result file not found");
+		}
+		return resolvedPath;
 	}
 
 	private String normalizeSeparators(Path path) {
@@ -158,5 +225,8 @@ public class AudioAnalysisResultService {
 
 	private boolean isBlank(String value) {
 		return value == null || value.isBlank();
+	}
+
+	public record ResultFile(Resource resource, MediaType mediaType, String filename) {
 	}
 }

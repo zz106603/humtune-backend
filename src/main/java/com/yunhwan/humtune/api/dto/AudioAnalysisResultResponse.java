@@ -12,6 +12,7 @@ public record AudioAnalysisResultResponse(
 		JsonNode adjustedNotes,
 		JsonNode chords,
 		String midiPath,
+		String previewAudioPath,
 		Long processingTimeMs,
 		String errorMessage
 ) {
