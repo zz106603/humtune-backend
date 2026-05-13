@@ -137,7 +137,7 @@ Spring은 Python 호출 실패, timeout, HTTP 오류, 필수 결과 누락을 `F
 
 - `AudioMeta`: 원본 파일명, content type, 파일 크기, raw audio path, 생성 시각
 - `AnalysisRequest`: 분석 요청 상태, 요청/시작/완료/실패 시각, 오류 메시지
-- `AnalysisResult`: detected scale, confidence, original/adjusted notes JSON, chords JSON, MIDI path, processing time, 설명/피드백용 `feedbackText`, `chordExplanation`, `naturalnessScore`
+- `AnalysisResult`: detected scale, confidence, original/adjusted notes JSON, chords JSON, MIDI path, preview audio path, processing time, 설명/피드백용 `feedbackText`, `chordExplanation`, `naturalnessScore`
 
 ## API Summary
 
@@ -185,10 +185,27 @@ Spring은 Python 호출 실패, timeout, HTTP 오류, 필수 결과 누락을 `F
   "adjustedNotes": [],
   "chords": [],
   "midiPath": "storage/midi/sample.mid",
+  "previewAudioPath": "storage/midi/sample.wav",
   "processingTimeMs": 1200,
   "errorMessage": null
 }
 ```
+
+### `GET /api/audio/{audioId}/files/preview`
+
+분석 결과의 브라우저 재생용 WAV preview 파일을 반환합니다.
+
+- Success: `200 OK`
+- Content-Type: `audio/wav`
+- Missing result or file: `404 Not Found`
+
+### `GET /api/audio/{audioId}/files/midi`
+
+분석 결과의 MIDI 파일을 다운로드합니다.
+
+- Success: `200 OK`
+- Content-Type: `application/octet-stream`
+- Missing result or file: `404 Not Found`
 
 ### `GET /health`
 
@@ -223,6 +240,7 @@ Success response:
   "adjustedNotes": [],
   "chords": [],
   "midiPath": "/absolute/path/to/storage/midi/sample.mid",
+  "previewAudioPath": "/absolute/path/to/storage/midi/sample.wav",
   "processingTimeMs": 1200,
   "errorMessage": null
 }
@@ -280,6 +298,8 @@ Upload and poll:
 curl -F "file=@sample.wav" http://localhost:8080/api/audio
 curl http://localhost:8080/api/audio/1
 curl http://localhost:8080/api/audio/1/result
+curl -i http://localhost:8080/api/audio/1/files/preview
+curl -OJ http://localhost:8080/api/audio/1/files/midi
 ```
 
 ## Failure Handling
