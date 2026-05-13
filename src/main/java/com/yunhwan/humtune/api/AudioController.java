@@ -7,6 +7,7 @@ import com.yunhwan.humtune.application.AudioAnalysisResultService;
 import com.yunhwan.humtune.application.AudioAnalysisResultService.ResultFile;
 import com.yunhwan.humtune.application.AudioStatusService;
 import com.yunhwan.humtune.application.AudioUploadService;
+import java.nio.charset.StandardCharsets;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -73,14 +74,14 @@ public class AudioController {
 
 	private String inlineDisposition(String filename) {
 		return ContentDisposition.inline()
-				.filename(filename)
+				.filename(filename, StandardCharsets.UTF_8)
 				.build()
 				.toString();
 	}
 
 	private String attachmentDisposition(String filename) {
 		return ContentDisposition.attachment()
-				.filename(filename)
+				.filename(filename, StandardCharsets.UTF_8)
 				.build()
 				.toString();
 	}

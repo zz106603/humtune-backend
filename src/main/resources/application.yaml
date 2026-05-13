@@ -18,6 +18,8 @@ audio-service:
   base-url: ${AUDIO_SERVICE_BASE_URL:http://127.0.0.1:8000}
 
 humtune:
+  cors:
+    allowed-origins: ${HUMTUNE_CORS_ALLOWED_ORIGINS:http://localhost:5173}
   audio:
     storage-path: ${HUMTUNE_AUDIO_STORAGE_PATH:storage/raw}
     output-directory: ${HUMTUNE_AUDIO_OUTPUT_DIRECTORY:storage/midi}

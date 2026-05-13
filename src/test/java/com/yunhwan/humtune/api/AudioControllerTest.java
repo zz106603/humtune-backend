@@ -18,6 +18,7 @@ import com.yunhwan.humtune.application.AudioAnalysisResultService;
 import com.yunhwan.humtune.application.AudioAnalysisResultService.ResultFile;
 import com.yunhwan.humtune.application.AudioStatusService;
 import com.yunhwan.humtune.application.AudioUploadService;
+import com.yunhwan.humtune.common.CorsConfig;
 import com.yunhwan.humtune.domain.analysis.AnalysisStatus;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,16 +26,20 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.io.PathResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
 
 @WebMvcTest(AudioController.class)
+@Import(CorsConfig.class)
+@TestPropertySource(properties = "humtune.cors.allowed-origins=http://localhost:5173,https://frontend.example.com")
 class AudioControllerTest {
 
 	@Autowired
@@ -189,13 +194,15 @@ class AudioControllerTest {
 		when(audioAnalysisResultService.getPreviewFile(eq(1L))).thenReturn(new ResultFile(
 				new PathResource(previewFile),
 				MediaType.parseMediaType("audio/wav"),
-				"sample.wav"
+				"허밍 preview.wav"
 		));
 
 		mockMvc.perform(get("/api/audio/{audioId}/files/preview", 1L))
 				.andExpect(status().isOk())
 				.andExpect(header().string("Content-Type", "audio/wav"))
-				.andExpect(header().string("Content-Disposition", "inline; filename=\"sample.wav\""));
+				.andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("inline")))
+				.andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("filename*=")))
+				.andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("UTF-8")));
 	}
 
 	@Test
@@ -205,12 +212,46 @@ class AudioControllerTest {
 		when(audioAnalysisResultService.getMidiFile(eq(1L))).thenReturn(new ResultFile(
 				new PathResource(midiFile),
 				MediaType.APPLICATION_OCTET_STREAM,
-				"sample.mid"
+				"허밍 결과.mid"
 		));
 
 		mockMvc.perform(get("/api/audio/{audioId}/files/midi", 1L))
 				.andExpect(status().isOk())
 				.andExpect(header().string("Content-Type", "application/octet-stream"))
-				.andExpect(header().string("Content-Disposition", "attachment; filename=\"sample.mid\""));
+				.andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("attachment")))
+				.andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("filename*=")))
+				.andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("UTF-8")));
+	}
+
+	@Test
+	void 설정된_localhost_frontend_origin을_CORS에서_허용한다() throws Exception {
+		when(audioStatusService.getStatus(eq(1L))).thenReturn(new AudioStatusResponse(
+				1L,
+				"sample.wav",
+				AnalysisStatus.PENDING,
+				Instant.parse("2026-05-07T10:15:30Z"),
+				null
+		));
+
+		mockMvc.perform(get("/api/audio/{audioId}", 1L)
+						.header("Origin", "http://localhost:5173"))
+				.andExpect(status().isOk())
+				.andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
+	}
+
+	@Test
+	void 설정으로_추가한_frontend_origin을_CORS에서_허용한다() throws Exception {
+		when(audioStatusService.getStatus(eq(1L))).thenReturn(new AudioStatusResponse(
+				1L,
+				"sample.wav",
+				AnalysisStatus.PENDING,
+				Instant.parse("2026-05-07T10:15:30Z"),
+				null
+		));
+
+		mockMvc.perform(get("/api/audio/{audioId}", 1L)
+						.header("Origin", "https://frontend.example.com"))
+				.andExpect(status().isOk())
+				.andExpect(header().string("Access-Control-Allow-Origin", "https://frontend.example.com"));
 	}
 }
