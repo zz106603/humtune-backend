@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -14,14 +15,19 @@ import com.yunhwan.humtune.api.dto.AudioAnalysisResultResponse;
 import com.yunhwan.humtune.api.dto.AudioStatusResponse;
 import com.yunhwan.humtune.api.dto.AudioUploadResponse;
 import com.yunhwan.humtune.application.AudioAnalysisResultService;
+import com.yunhwan.humtune.application.AudioAnalysisResultService.ResultFile;
 import com.yunhwan.humtune.application.AudioStatusService;
 import com.yunhwan.humtune.application.AudioUploadService;
 import com.yunhwan.humtune.domain.analysis.AnalysisStatus;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.core.io.PathResource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -124,6 +130,7 @@ class AudioControllerTest {
 				objectMapper.readTree("[{\"pitch\":62}]"),
 				objectMapper.readTree("[{\"name\":\"C\"}]"),
 				"storage/midi/sample.mid",
+				"storage/midi/sample.wav",
 				123L,
 				null
 		));
@@ -138,6 +145,7 @@ class AudioControllerTest {
 				.andExpect(jsonPath("$.adjustedNotes[0].pitch").value(62))
 				.andExpect(jsonPath("$.chords[0].name").value("C"))
 				.andExpect(jsonPath("$.midiPath").value("storage/midi/sample.mid"))
+				.andExpect(jsonPath("$.previewAudioPath").value("storage/midi/sample.wav"))
 				.andExpect(jsonPath("$.processingTimeMs").value(123))
 				.andExpect(jsonPath("$.errorMessage").value(nullValue()));
 	}
@@ -147,6 +155,7 @@ class AudioControllerTest {
 		when(audioAnalysisResultService.getResult(eq(1L))).thenReturn(new AudioAnalysisResultResponse(
 				1L,
 				AnalysisStatus.FAILED,
+				null,
 				null,
 				null,
 				null,
@@ -171,5 +180,37 @@ class AudioControllerTest {
 
 		mockMvc.perform(get("/api/audio/{audioId}/result", 999L))
 				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void preview_파일을_audio_wav로_반환한다() throws Exception {
+		Path previewFile = Files.createTempFile("preview", ".wav");
+		Files.writeString(previewFile, "wav");
+		when(audioAnalysisResultService.getPreviewFile(eq(1L))).thenReturn(new ResultFile(
+				new PathResource(previewFile),
+				MediaType.parseMediaType("audio/wav"),
+				"sample.wav"
+		));
+
+		mockMvc.perform(get("/api/audio/{audioId}/files/preview", 1L))
+				.andExpect(status().isOk())
+				.andExpect(header().string("Content-Type", "audio/wav"))
+				.andExpect(header().string("Content-Disposition", "inline; filename=\"sample.wav\""));
+	}
+
+	@Test
+	void midi_파일을_attachment로_반환한다() throws Exception {
+		Path midiFile = Files.createTempFile("sample", ".mid");
+		Files.writeString(midiFile, "midi");
+		when(audioAnalysisResultService.getMidiFile(eq(1L))).thenReturn(new ResultFile(
+				new PathResource(midiFile),
+				MediaType.APPLICATION_OCTET_STREAM,
+				"sample.mid"
+		));
+
+		mockMvc.perform(get("/api/audio/{audioId}/files/midi", 1L))
+				.andExpect(status().isOk())
+				.andExpect(header().string("Content-Type", "application/octet-stream"))
+				.andExpect(header().string("Content-Disposition", "attachment; filename=\"sample.mid\""));
 	}
 }

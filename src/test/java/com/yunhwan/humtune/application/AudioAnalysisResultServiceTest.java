@@ -15,6 +15,7 @@ import com.yunhwan.humtune.domain.analysis.AnalysisResultRepository;
 import com.yunhwan.humtune.domain.analysis.AnalysisStatus;
 import com.yunhwan.humtune.domain.audio.AudioMeta;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,6 +67,7 @@ class AudioAnalysisResultServiceTest {
 		assertThat(result.getAdjustedNotesJson()).contains("\"pitch\":62");
 		assertThat(result.getChordsJson()).contains("\"name\":\"C\"");
 		assertThat(result.getMidiPath()).isEqualTo("storage/midi/sample.mid");
+		assertThat(result.getPreviewAudioPath()).isEqualTo("storage/midi/sample.wav");
 		assertThat(result.getProcessingTimeMs()).isEqualTo(123L);
 		assertThat(analysisRequest.getStatus()).isEqualTo(AnalysisStatus.COMPLETED);
 	}
@@ -95,6 +97,7 @@ class AudioAnalysisResultServiceTest {
 				null,
 				null,
 				null,
+				null,
 				"invalid audio file"
 		);
 
@@ -117,6 +120,7 @@ class AudioAnalysisResultServiceTest {
 				objectMapper.readTree("[{\"pitch\":62}]"),
 				objectMapper.readTree("[{\"name\":\"C\"}]"),
 				"storage/midi/sample.mid",
+				null,
 				123L,
 				null
 		);
@@ -139,6 +143,7 @@ class AudioAnalysisResultServiceTest {
 				.adjustedNotesJson("[{\"pitch\":62}]")
 				.chordsJson("[{\"name\":\"C\"}]")
 				.midiPath("storage/midi/sample.mid")
+				.previewAudioPath("storage/midi/sample.wav")
 				.processingTimeMs(123L)
 				.build();
 		when(analysisRequestRepository.findByAudioMeta_AudioId(1L)).thenReturn(Optional.of(analysisRequest));
@@ -154,8 +159,102 @@ class AudioAnalysisResultServiceTest {
 		assertThat(response.adjustedNotes().get(0).get("pitch").asInt()).isEqualTo(62);
 		assertThat(response.chords().get(0).get("name").asText()).isEqualTo("C");
 		assertThat(response.midiPath()).isEqualTo("storage/midi/sample.mid");
+		assertThat(response.previewAudioPath()).isEqualTo("storage/midi/sample.wav");
 		assertThat(response.processingTimeMs()).isEqualTo(123L);
 		assertThat(response.errorMessage()).isNull();
+	}
+
+	@Test
+	void preview_파일을_outputDirectory_안에서_조회한다() throws Exception {
+		Path outputDirectory = Files.createTempDirectory("humtune-output");
+		Path previewFile = outputDirectory.resolve("sample.wav");
+		Files.writeString(previewFile, "wav");
+		audioAnalysisResultService = new AudioAnalysisResultService(
+				analysisRequestRepository,
+				analysisResultRepository,
+				objectMapper,
+				outputDirectory
+		);
+		AnalysisRequest analysisRequest = completedAnalysisRequest();
+		AnalysisResult result = AnalysisResult.builder()
+				.analysisRequest(analysisRequest)
+				.detectedScale("C_MAJOR")
+				.keyConfidence(0.9)
+				.originalNotesJson("[]")
+				.adjustedNotesJson("[]")
+				.chordsJson("[]")
+				.midiPath(outputDirectory.resolve("sample.mid").toString())
+				.previewAudioPath(outputDirectory.resolve("sample.wav").toString())
+				.processingTimeMs(123L)
+				.build();
+		when(analysisRequestRepository.findByAudioMeta_AudioId(1L)).thenReturn(Optional.of(analysisRequest));
+		when(analysisResultRepository.findByAnalysisRequest(analysisRequest)).thenReturn(Optional.of(result));
+
+		var file = audioAnalysisResultService.getPreviewFile(1L);
+
+		assertThat(file.mediaType().toString()).isEqualTo("audio/wav");
+		assertThat(file.filename()).isEqualTo("sample.wav");
+		assertThat(file.resource().exists()).isTrue();
+	}
+
+	@Test
+	void preview_파일이_없으면_404가_발생한다() throws Exception {
+		Path outputDirectory = Files.createTempDirectory("humtune-output");
+		audioAnalysisResultService = new AudioAnalysisResultService(
+				analysisRequestRepository,
+				analysisResultRepository,
+				objectMapper,
+				outputDirectory
+		);
+		AnalysisRequest analysisRequest = completedAnalysisRequest();
+		AnalysisResult result = AnalysisResult.builder()
+				.analysisRequest(analysisRequest)
+				.detectedScale("C_MAJOR")
+				.keyConfidence(0.9)
+				.originalNotesJson("[]")
+				.adjustedNotesJson("[]")
+				.chordsJson("[]")
+				.midiPath(outputDirectory.resolve("sample.mid").toString())
+				.previewAudioPath(outputDirectory.resolve("missing.wav").toString())
+				.processingTimeMs(123L)
+				.build();
+		when(analysisRequestRepository.findByAudioMeta_AudioId(1L)).thenReturn(Optional.of(analysisRequest));
+		when(analysisResultRepository.findByAnalysisRequest(analysisRequest)).thenReturn(Optional.of(result));
+
+		assertThatThrownBy(() -> audioAnalysisResultService.getPreviewFile(1L))
+				.isInstanceOf(ResponseStatusException.class)
+				.hasMessageContaining("404 NOT_FOUND")
+				.hasMessageContaining("Preview audio file not found");
+	}
+
+	@Test
+	void result_파일_경로가_outputDirectory_밖이면_404가_발생한다() throws Exception {
+		Path outputDirectory = Files.createTempDirectory("humtune-output");
+		audioAnalysisResultService = new AudioAnalysisResultService(
+				analysisRequestRepository,
+				analysisResultRepository,
+				objectMapper,
+				outputDirectory
+		);
+		AnalysisRequest analysisRequest = completedAnalysisRequest();
+		AnalysisResult result = AnalysisResult.builder()
+				.analysisRequest(analysisRequest)
+				.detectedScale("C_MAJOR")
+				.keyConfidence(0.9)
+				.originalNotesJson("[]")
+				.adjustedNotesJson("[]")
+				.chordsJson("[]")
+				.midiPath(outputDirectory.resolve("sample.mid").toString())
+				.previewAudioPath("../sample.wav")
+				.processingTimeMs(123L)
+				.build();
+		when(analysisRequestRepository.findByAudioMeta_AudioId(1L)).thenReturn(Optional.of(analysisRequest));
+		when(analysisResultRepository.findByAnalysisRequest(analysisRequest)).thenReturn(Optional.of(result));
+
+		assertThatThrownBy(() -> audioAnalysisResultService.getPreviewFile(1L))
+				.isInstanceOf(ResponseStatusException.class)
+				.hasMessageContaining("404 NOT_FOUND")
+				.hasMessageContaining("Result file not found");
 	}
 
 	@Test
@@ -216,6 +315,7 @@ class AudioAnalysisResultServiceTest {
 				objectMapper.readTree("[{\"pitch\":62}]"),
 				objectMapper.readTree("[{\"name\":\"C\"}]"),
 				Path.of("storage/midi/sample.mid").toAbsolutePath().normalize().toString(),
+				Path.of("storage/midi/sample.wav").toAbsolutePath().normalize().toString(),
 				123L,
 				null
 		);

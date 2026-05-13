@@ -57,6 +57,7 @@ class AudioAnalysisProcessorTest {
 				objectMapper.readTree("[{\"pitch\":62}]"),
 				objectMapper.readTree("[{\"name\":\"C\"}]"),
 				"storage/midi/sample.mid",
+				null,
 				123L,
 				null
 		);
