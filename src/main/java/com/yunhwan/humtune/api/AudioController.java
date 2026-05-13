@@ -4,9 +4,14 @@ import com.yunhwan.humtune.api.dto.AudioAnalysisResultResponse;
 import com.yunhwan.humtune.api.dto.AudioStatusResponse;
 import com.yunhwan.humtune.api.dto.AudioUploadResponse;
 import com.yunhwan.humtune.application.AudioAnalysisResultService;
+import com.yunhwan.humtune.application.AudioAnalysisResultService.ResultFile;
 import com.yunhwan.humtune.application.AudioStatusService;
 import com.yunhwan.humtune.application.AudioUploadService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -46,5 +51,37 @@ public class AudioController {
 	@GetMapping("/api/audio/{audioId}/result")
 	public AudioAnalysisResultResponse getResult(@PathVariable Long audioId) {
 		return audioAnalysisResultService.getResult(audioId);
+	}
+
+	@GetMapping("/api/audio/{audioId}/files/preview")
+	public ResponseEntity<Resource> getPreviewFile(@PathVariable Long audioId) {
+		ResultFile file = audioAnalysisResultService.getPreviewFile(audioId);
+		return ResponseEntity.ok()
+				.contentType(file.mediaType())
+				.header(HttpHeaders.CONTENT_DISPOSITION, inlineDisposition(file.filename()))
+				.body(file.resource());
+	}
+
+	@GetMapping("/api/audio/{audioId}/files/midi")
+	public ResponseEntity<Resource> getMidiFile(@PathVariable Long audioId) {
+		ResultFile file = audioAnalysisResultService.getMidiFile(audioId);
+		return ResponseEntity.ok()
+				.contentType(file.mediaType())
+				.header(HttpHeaders.CONTENT_DISPOSITION, attachmentDisposition(file.filename()))
+				.body(file.resource());
+	}
+
+	private String inlineDisposition(String filename) {
+		return ContentDisposition.inline()
+				.filename(filename)
+				.build()
+				.toString();
+	}
+
+	private String attachmentDisposition(String filename) {
+		return ContentDisposition.attachment()
+				.filename(filename)
+				.build()
+				.toString();
 	}
 }

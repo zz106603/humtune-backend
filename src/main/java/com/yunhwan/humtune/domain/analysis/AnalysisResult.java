@@ -51,6 +51,9 @@ public class AnalysisResult {
 	@Column(name = "midi_path", nullable = false, length = 1024)
 	private String midiPath;
 
+	@Column(name = "preview_audio_path", length = 1024)
+	private String previewAudioPath;
+
 	@Column(name = "processing_time_ms")
 	private Long processingTimeMs;
 
@@ -79,6 +82,7 @@ public class AnalysisResult {
 			String adjustedNotesJson,
 			String chordsJson,
 			String midiPath,
+			String previewAudioPath,
 			Long processingTimeMs,
 			String feedbackText,
 			String chordExplanation,
@@ -91,6 +95,7 @@ public class AnalysisResult {
 		this.adjustedNotesJson = adjustedNotesJson;
 		this.chordsJson = chordsJson;
 		this.midiPath = midiPath;
+		this.previewAudioPath = previewAudioPath;
 		this.processingTimeMs = processingTimeMs;
 		this.feedbackText = feedbackText;
 		this.chordExplanation = chordExplanation;
@@ -127,6 +132,10 @@ public class AnalysisResult {
 
 	public String getMidiPath() {
 		return midiPath;
+	}
+
+	public String getPreviewAudioPath() {
+		return previewAudioPath;
 	}
 
 	public Long getProcessingTimeMs() {
