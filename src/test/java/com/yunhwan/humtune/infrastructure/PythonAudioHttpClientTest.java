@@ -13,6 +13,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClient;
@@ -50,7 +51,7 @@ class PythonAudioHttpClientTest {
 					  "keyConfidence": 0.9,
 					  "originalNotes": [{"pitch": 60}],
 					  "adjustedNotes": [{"pitch": 62}],
-					  "chords": [{"name": "C"}],
+					  "chords": ["C"],
 					  "midiPath": "storage/midi/sample.mid",
 					  "processingTimeMs": 123
 					}
@@ -64,7 +65,7 @@ class PythonAudioHttpClientTest {
 
 		try {
 			String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
-			PythonAudioHttpClient client = new PythonAudioHttpClient(RestClient.builder(), baseUrl);
+			PythonAudioHttpClient client = client(baseUrl);
 
 			var response = client.analyze(9L, "storage\\raw\\test.m4a", "storage/midi");
 
@@ -112,7 +113,7 @@ class PythonAudioHttpClientTest {
 
 		try {
 			String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
-			PythonAudioHttpClient client = new PythonAudioHttpClient(RestClient.builder(), baseUrl);
+			PythonAudioHttpClient client = client(baseUrl);
 
 			assertThatExceptionOfType(PythonAudioClientException.class)
 					.isThrownBy(() -> client.analyze(9L, "storage/raw/test.m4a", "storage/midi"))
@@ -136,7 +137,7 @@ class PythonAudioHttpClientTest {
 
 		try {
 			String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
-			PythonAudioHttpClient client = new PythonAudioHttpClient(RestClient.builder(), baseUrl);
+			PythonAudioHttpClient client = client(baseUrl);
 
 			assertThatThrownBy(() -> client.analyze(9L, "storage/raw/test.m4a", "storage/midi"))
 					.isInstanceOf(PythonAudioClientException.class)
@@ -193,12 +194,23 @@ class PythonAudioHttpClientTest {
 		}
 		PythonAudioHttpClient client = new PythonAudioHttpClient(
 				RestClient.builder(),
-				"http://127.0.0.1:" + unusedPort
+				"http://127.0.0.1:" + unusedPort,
+				Duration.ofSeconds(3),
+				Duration.ofSeconds(120)
 		);
 
 		assertThatExceptionOfType(PythonAudioClientException.class)
 				.isThrownBy(() -> client.analyze(9L, "storage/raw/test.m4a", "storage/midi"))
 				.satisfies(ex -> assertThat(ex.getFailureCategory()).isEqualTo(FailureCategory.PYTHON_NETWORK_ERROR))
 				.withMessageContaining("Python audio service request failed");
+	}
+
+	private PythonAudioHttpClient client(String baseUrl) {
+		return new PythonAudioHttpClient(
+				RestClient.builder(),
+				baseUrl,
+				Duration.ofSeconds(3),
+				Duration.ofSeconds(120)
+		);
 	}
 }

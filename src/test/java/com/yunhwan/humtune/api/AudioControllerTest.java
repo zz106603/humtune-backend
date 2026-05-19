@@ -133,7 +133,7 @@ class AudioControllerTest {
 				0.9,
 				objectMapper.readTree("[{\"pitch\":60}]"),
 				objectMapper.readTree("[{\"pitch\":62}]"),
-				objectMapper.readTree("[{\"name\":\"C\"}]"),
+				objectMapper.readTree("[\"C\"]"),
 				"storage/midi/sample.mid",
 				"storage/midi/sample.wav",
 				123L,
@@ -148,7 +148,7 @@ class AudioControllerTest {
 				.andExpect(jsonPath("$.keyConfidence").value(0.9))
 				.andExpect(jsonPath("$.originalNotes[0].pitch").value(60))
 				.andExpect(jsonPath("$.adjustedNotes[0].pitch").value(62))
-				.andExpect(jsonPath("$.chords[0].name").value("C"))
+				.andExpect(jsonPath("$.chords[0]").value("C"))
 				.andExpect(jsonPath("$.midiPath").value("storage/midi/sample.mid"))
 				.andExpect(jsonPath("$.previewAudioPath").value("storage/midi/sample.wav"))
 				.andExpect(jsonPath("$.processingTimeMs").value(123))

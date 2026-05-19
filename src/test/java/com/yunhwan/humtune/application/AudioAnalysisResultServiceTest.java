@@ -65,7 +65,7 @@ class AudioAnalysisResultServiceTest {
 		assertThat(result.getKeyConfidence()).isEqualTo(0.9);
 		assertThat(result.getOriginalNotesJson()).contains("\"pitch\":60");
 		assertThat(result.getAdjustedNotesJson()).contains("\"pitch\":62");
-		assertThat(result.getChordsJson()).contains("\"name\":\"C\"");
+		assertThat(result.getChordsJson()).contains("\"C\"");
 		assertThat(result.getMidiPath()).isEqualTo("storage/midi/sample.mid");
 		assertThat(result.getPreviewAudioPath()).isEqualTo("storage/midi/sample.wav");
 		assertThat(result.getProcessingTimeMs()).isEqualTo(123L);
@@ -118,7 +118,7 @@ class AudioAnalysisResultServiceTest {
 				0.9,
 				objectMapper.readTree("[{\"pitch\":60}]"),
 				objectMapper.readTree("[{\"pitch\":62}]"),
-				objectMapper.readTree("[{\"name\":\"C\"}]"),
+				objectMapper.readTree("[\"C\"]"),
 				"storage/midi/sample.mid",
 				null,
 				123L,
@@ -141,7 +141,7 @@ class AudioAnalysisResultServiceTest {
 				.keyConfidence(0.9)
 				.originalNotesJson("[{\"pitch\":60}]")
 				.adjustedNotesJson("[{\"pitch\":62}]")
-				.chordsJson("[{\"name\":\"C\"}]")
+				.chordsJson("[\"C\"]")
 				.midiPath("storage/midi/sample.mid")
 				.previewAudioPath("storage/midi/sample.wav")
 				.processingTimeMs(123L)
@@ -157,7 +157,7 @@ class AudioAnalysisResultServiceTest {
 		assertThat(response.keyConfidence()).isEqualTo(0.9);
 		assertThat(response.originalNotes().get(0).get("pitch").asInt()).isEqualTo(60);
 		assertThat(response.adjustedNotes().get(0).get("pitch").asInt()).isEqualTo(62);
-		assertThat(response.chords().get(0).get("name").asText()).isEqualTo("C");
+		assertThat(response.chords().get(0).asText()).isEqualTo("C");
 		assertThat(response.midiPath()).isEqualTo("storage/midi/sample.mid");
 		assertThat(response.previewAudioPath()).isEqualTo("storage/midi/sample.wav");
 		assertThat(response.processingTimeMs()).isEqualTo(123L);
@@ -313,7 +313,7 @@ class AudioAnalysisResultServiceTest {
 				0.9,
 				objectMapper.readTree("[{\"pitch\":60}]"),
 				objectMapper.readTree("[{\"pitch\":62}]"),
-				objectMapper.readTree("[{\"name\":\"C\"}]"),
+				objectMapper.readTree("[\"C\"]"),
 				Path.of("storage/midi/sample.mid").toAbsolutePath().normalize().toString(),
 				Path.of("storage/midi/sample.wav").toAbsolutePath().normalize().toString(),
 				123L,
