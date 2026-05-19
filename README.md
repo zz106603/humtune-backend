@@ -137,7 +137,7 @@ Spring은 Python 호출 실패, timeout, HTTP 오류, 필수 결과 누락을 `F
 
 - `AudioMeta`: 원본 파일명, content type, 파일 크기, raw audio path, 생성 시각
 - `AnalysisRequest`: 분석 요청 상태, 요청/시작/완료/실패 시각, 오류 메시지
-- `AnalysisResult`: detected scale, confidence, original/adjusted notes JSON, chords JSON, MIDI path, preview audio path, processing time, 설명/피드백용 `feedbackText`, `chordExplanation`, `naturalnessScore`
+- `AnalysisResult`: detected scale, confidence, raw/final notes JSON, chord label sequence JSON, MIDI path, preview audio path, processing time, 설명/피드백용 `feedbackText`, `chordExplanation`, `naturalnessScore`
 
 ## API Summary
 
@@ -175,15 +175,22 @@ Spring은 Python 호출 실패, timeout, HTTP 오류, 필수 결과 누락을 `F
 
 분석 결과를 조회합니다. 완료 전에는 결과 필드가 `null`로 반환됩니다.
 
+필드 의미:
+
+- `midiPath`: 최종 산출물 MIDI 파일 경로입니다.
+- `adjustedNotes`: 최종 quantized melody notes입니다. 기존 API 호환을 위해 필드명은 유지합니다.
+- `originalNotes`: Basic Pitch raw notes입니다. 진단/호환용이며 주 산출물은 아닙니다.
+- `chords`: chord label sequence입니다. chord timing은 MIDI 파일에 반영되며 API 필드로 노출하지 않습니다.
+
 ```json
 {
   "audioId": 1,
   "status": "COMPLETED",
   "detectedScale": "C major",
   "keyConfidence": 0.92,
-  "originalNotes": [],
-  "adjustedNotes": [],
-  "chords": [],
+  "originalNotes": [{"pitch": 60}],
+  "adjustedNotes": [{"pitch": 60}],
+  "chords": ["C"],
   "midiPath": "storage/midi/sample.mid",
   "previewAudioPath": "storage/midi/sample.wav",
   "processingTimeMs": 1200,
@@ -236,9 +243,9 @@ Success response:
   "status": "COMPLETED",
   "detectedScale": "C major",
   "keyConfidence": 0.92,
-  "originalNotes": [],
-  "adjustedNotes": [],
-  "chords": [],
+  "originalNotes": [{"pitch": 60}],
+  "adjustedNotes": [{"pitch": 60}],
+  "chords": ["C"],
   "midiPath": "/absolute/path/to/storage/midi/sample.mid",
   "previewAudioPath": "/absolute/path/to/storage/midi/sample.wav",
   "processingTimeMs": 1200,
@@ -288,6 +295,8 @@ SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/humtune
 SPRING_DATASOURCE_USERNAME=humtune
 SPRING_DATASOURCE_PASSWORD=humtune
 AUDIO_SERVICE_BASE_URL=http://127.0.0.1:8000
+AUDIO_SERVICE_CONNECT_TIMEOUT=3s
+AUDIO_SERVICE_RESPONSE_TIMEOUT=120s
 HUMTUNE_CORS_ALLOWED_ORIGINS=http://localhost:5173
 HUMTUNE_AUDIO_STORAGE_PATH=storage/raw
 HUMTUNE_AUDIO_OUTPUT_DIRECTORY=storage/midi
