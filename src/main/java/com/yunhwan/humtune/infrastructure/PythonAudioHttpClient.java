@@ -31,18 +31,22 @@ import org.springframework.web.client.RestClientException;
 public class PythonAudioHttpClient implements PythonAudioClient {
 
 	private static final Logger log = LoggerFactory.getLogger(PythonAudioHttpClient.class);
-	private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(3);
-	private static final Duration RESPONSE_TIMEOUT = Duration.ofSeconds(30);
 	private static final int MAX_ERROR_BODY_BYTES = 4096;
 
 	private final RestClient restClient;
 	private final String baseUrl;
+	private final Duration connectTimeout;
+	private final Duration responseTimeout;
 
 	public PythonAudioHttpClient(
 			RestClient.Builder restClientBuilder,
-			@Value("${audio-service.base-url:http://127.0.0.1:8000}") String baseUrl
+			@Value("${audio-service.base-url:http://127.0.0.1:8000}") String baseUrl,
+			@Value("${audio-service.connect-timeout:3s}") Duration connectTimeout,
+			@Value("${audio-service.response-timeout:120s}") Duration responseTimeout
 	) {
 		this.baseUrl = baseUrl;
+		this.connectTimeout = connectTimeout;
+		this.responseTimeout = responseTimeout;
 		this.restClient = restClientBuilder
 				.baseUrl(baseUrl)
 				.requestFactory(createHttpRequestFactory())
@@ -168,10 +172,10 @@ public class PythonAudioHttpClient implements PythonAudioClient {
 
 	private HttpComponentsClientHttpRequestFactory createHttpRequestFactory() {
 		ConnectionConfig connectionConfig = ConnectionConfig.custom()
-				.setConnectTimeout(Timeout.of(CONNECT_TIMEOUT))
+				.setConnectTimeout(Timeout.of(connectTimeout))
 				.build();
 		RequestConfig requestConfig = RequestConfig.custom()
-				.setResponseTimeout(Timeout.of(RESPONSE_TIMEOUT))
+				.setResponseTimeout(Timeout.of(responseTimeout))
 				.build();
 		PoolingHttpClientConnectionManager connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
 				.setDefaultConnectionConfig(connectionConfig)

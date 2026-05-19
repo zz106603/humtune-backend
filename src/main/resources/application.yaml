@@ -16,6 +16,8 @@ spring:
 
 audio-service:
   base-url: ${AUDIO_SERVICE_BASE_URL:http://127.0.0.1:8000}
+  connect-timeout: ${AUDIO_SERVICE_CONNECT_TIMEOUT:3s}
+  response-timeout: ${AUDIO_SERVICE_RESPONSE_TIMEOUT:120s}
 
 humtune:
   cors:
