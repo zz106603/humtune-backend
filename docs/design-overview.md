@@ -239,6 +239,7 @@ POST /internal/audio/analyze
 
 - audioId
 - rawAudioPath
+- outputDirectory
 
 ---
 
@@ -248,10 +249,13 @@ POST /internal/audio/analyze
 
 - status: COMPLETED
 - detectedScale
-- adjustedNotes
-- chords
-- midiPath
+- originalNotes: Basic Pitch raw notes, 진단/호환용
+- adjustedNotes: 최종 quantized melody notes, 기존 API 호환을 위해 필드명 유지
+- chords: chord label sequence only
+- midiPath: 최종 산출물 MIDI 파일 경로
 - previewAudioPath
+
+chord timing은 `chords`에 노출하지 않고 MIDI 파일에 반영한다.
 
 실패:
 
@@ -280,8 +284,8 @@ POST /internal/audio/analyze
 ### 입력
 
 - detectedScale
-- adjustedNotes
-- chords
+- adjustedNotes: 최종 quantized melody notes
+- chords: chord label sequence
 
 ---
 
@@ -303,10 +307,11 @@ POST /internal/audio/analyze
 
 ## 11. Timeout / 장애 처리
 
-- Python 호출 timeout: 15초
+- Python 연결 timeout: 3초
+- Python 응답 timeout: 120초
 - timeout 시 FAILED
 
-- PROCESSING 최대: 60초
+- PROCESSING은 Python 응답 timeout 기준으로 실패 전환
 
 ### 판정 주체
 
@@ -314,7 +319,7 @@ POST /internal/audio/analyze
 
 ### 처리
 
-- 60초 초과 시 FAILED
+- Python 응답 timeout 초과 시 FAILED
 
 ---
 
