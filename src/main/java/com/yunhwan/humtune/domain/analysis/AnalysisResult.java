@@ -48,6 +48,14 @@ public class AnalysisResult {
 	@Column(name = "chords_json", nullable = false, columnDefinition = "jsonb")
 	private String chordsJson;
 
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "melody_metrics_json", columnDefinition = "jsonb")
+	private String melodyMetricsJson;
+
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "feedback_evidence_json", columnDefinition = "jsonb")
+	private String feedbackEvidenceJson;
+
 	@Column(name = "midi_path", nullable = false, length = 1024)
 	private String midiPath;
 
@@ -81,6 +89,8 @@ public class AnalysisResult {
 			String originalNotesJson,
 			String adjustedNotesJson,
 			String chordsJson,
+			String melodyMetricsJson,
+			String feedbackEvidenceJson,
 			String midiPath,
 			String previewAudioPath,
 			Long processingTimeMs,
@@ -94,6 +104,8 @@ public class AnalysisResult {
 		this.originalNotesJson = originalNotesJson;
 		this.adjustedNotesJson = adjustedNotesJson;
 		this.chordsJson = chordsJson;
+		this.melodyMetricsJson = melodyMetricsJson;
+		this.feedbackEvidenceJson = feedbackEvidenceJson;
 		this.midiPath = midiPath;
 		this.previewAudioPath = previewAudioPath;
 		this.processingTimeMs = processingTimeMs;
@@ -128,6 +140,14 @@ public class AnalysisResult {
 
 	public String getChordsJson() {
 		return chordsJson;
+	}
+
+	public String getMelodyMetricsJson() {
+		return melodyMetricsJson;
+	}
+
+	public String getFeedbackEvidenceJson() {
+		return feedbackEvidenceJson;
 	}
 
 	public String getMidiPath() {
