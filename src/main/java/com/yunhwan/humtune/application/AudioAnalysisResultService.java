@@ -27,17 +27,20 @@ public class AudioAnalysisResultService {
 	private final AnalysisRequestRepository analysisRequestRepository;
 	private final AnalysisResultRepository analysisResultRepository;
 	private final ObjectMapper objectMapper;
+	private final AiFeedbackService aiFeedbackService;
 	private final Path outputDirectory;
 
 	public AudioAnalysisResultService(
 			AnalysisRequestRepository analysisRequestRepository,
 			AnalysisResultRepository analysisResultRepository,
 			ObjectMapper objectMapper,
+			AiFeedbackService aiFeedbackService,
 			@Value("${humtune.audio.output-directory:storage/midi}") Path outputDirectory
 	) {
 		this.analysisRequestRepository = analysisRequestRepository;
 		this.analysisResultRepository = analysisResultRepository;
 		this.objectMapper = objectMapper;
+		this.aiFeedbackService = aiFeedbackService;
 		this.outputDirectory = outputDirectory;
 	}
 
@@ -65,6 +68,7 @@ public class AudioAnalysisResultService {
 							.midiPath(toStoredPath(response.midiPath()))
 							.previewAudioPath(toStoredPathOrNull(response.previewAudioPath()))
 							.processingTimeMs(response.processingTimeMs())
+							.feedbackText(aiFeedbackService.generateFeedback(response))
 							.build());
 					analysisRequest.markCompleted();
 				});
@@ -95,6 +99,7 @@ public class AudioAnalysisResultService {
 						result.getMidiPath(),
 						result.getPreviewAudioPath(),
 						result.getProcessingTimeMs(),
+						result.getFeedbackText(),
 						null
 				))
 				.orElseGet(() -> emptyResult(audioMeta.getAudioId(), status, null));
@@ -104,6 +109,7 @@ public class AudioAnalysisResultService {
 		return new AudioAnalysisResultResponse(
 				audioId,
 				status,
+				null,
 				null,
 				null,
 				null,
