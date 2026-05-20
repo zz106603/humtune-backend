@@ -17,7 +17,7 @@
 
 ### 한 줄 정의
 
-사용자의 허밍을 분석하여 멜로디를 보정하고,  
+사용자의 허밍을 분석하여 멜로디를 보정하고,
 어울리는 코드와 피아노 반주를 생성하는 AI-assisted 음악 보조 시스템
 
 ---
@@ -34,15 +34,16 @@
 
 ### 2.2 AI 역할 (최종 정의)
 
-AI는 음악을 생성하지 않는다.  
-AI는 rule 기반 결과를 **설명, 평가, 보조 판단**하는 역할만 수행한다.
+AI는 음악을 생성하지 않는다.
+AI는 deterministic 분석 결과와 근거를 **설명, 평가, 코칭 문장으로 변환**하는 역할만 수행한다.
 
 AI의 역할:
 
 - 코드 및 결과 설명 생성
 - 사용자 허밍 피드백 생성
 - 생성된 결과의 자연스러움 평가
-- chord/scale 후보가 애매한 경우 보조 평가
+- deterministic 지표를 사용자 친화적인 설명으로 변환
+- 분석 근거 기반의 음악 코칭 피드백 생성
 
 ---
 
@@ -54,6 +55,9 @@ AI는 절대 수행하지 않는다:
 - 음정 보정
 - 박자 보정
 - scale/chord 단독 결정
+- scale/chord 후보 선택
+- note 수정
+- melody 생성
 - MIDI 생성
 
 → 모든 생성 로직은 시스템 코드가 담당한다
@@ -125,19 +129,21 @@ POST /api/audio
 
 ## 6. 핵심 처리 흐름
 
-Upload  
-→ AnalysisRequest 생성 (PENDING)  
-→ Async worker 실행  
-→ PROCESSING  
-→ Python 분석  
-→ Rule 기반 결과 생성  
-→ AI 평가 및 피드백 생성  
-→ 결과 저장  
+Upload
+→ AnalysisRequest 생성 (PENDING)
+→ Async worker 실행
+→ PROCESSING
+→ Python 분석
+→ Rule 기반 결과 생성
+→ Melody quality metric 계산
+→ Feedback evidence 생성
+→ AI 피드백 설명 생성
+→ 결과 저장
 → COMPLETED
 
 실패 시:
 
-→ FAILED  
+→ FAILED
 → errorMessage 저장
 
 ---
@@ -195,6 +201,43 @@ tie-break:
 
 ---
 
+### 7.6 Melody Quality Metrics
+
+피드백에 필요한 품질 지표는 deterministic 코드가 계산한다.
+
+지표 방향:
+
+- scale tone 포함 비율
+- pitch 안정성
+- 음역 범위
+- 큰 도약 빈도
+- 반복 패턴
+- 박자 grid 정렬 정도
+- chord tone 포함 비율
+
+AI는 지표를 계산하지 않는다.
+AI는 계산된 지표를 설명 문장으로 바꾼다.
+
+---
+
+### 7.7 Feedback Evidence
+
+AI 피드백은 반드시 시스템이 생성한 evidence를 근거로 한다.
+
+evidence 예시:
+
+- scale fitting 결과와 scale 밖 음 비율
+- quantization 전후 timing 차이
+- melody interval 분포
+- chord와 melody note의 매칭 비율
+- 반복되는 motif 후보
+- 불안정하거나 개선 여지가 있는 구간
+
+evidence는 판단 근거이며 생성 명령이 아니다.
+AI는 evidence 밖의 음악적 결정을 새로 만들지 않는다.
+
+---
+
 ## 8. 실패 처리
 
 ### 8.1 Pitch 실패
@@ -205,7 +248,7 @@ tie-break:
 
 ### 8.2 Note 실패
 
-→ default melody 생성  
+→ default melody 생성
 → COMPLETED 유지
 
 ---
@@ -226,7 +269,7 @@ C - F - G - C
 
 ### 8.5 AI 실패
 
-→ COMPLETED 유지  
+→ COMPLETED 유지
 → feedbackText = null
 
 ---
@@ -252,10 +295,13 @@ POST /internal/audio/analyze
 - originalNotes: Basic Pitch raw notes, 진단/호환용
 - adjustedNotes: 최종 quantized melody notes, 기존 API 호환을 위해 필드명 유지
 - chords: chord label sequence only
+- melodyMetrics: deterministic 품질 지표
+- feedbackEvidence: deterministic 피드백 근거
 - midiPath: 최종 산출물 MIDI 파일 경로
 - previewAudioPath
 
 chord timing은 `chords`에 노출하지 않고 MIDI 파일에 반영한다.
+알 수 없는 추가 필드는 Spring 역직렬화 실패를 일으키지 않아야 한다.
 
 실패:
 
@@ -286,6 +332,8 @@ chord timing은 `chords`에 노출하지 않고 MIDI 파일에 반영한다.
 - detectedScale
 - adjustedNotes: 최종 quantized melody notes
 - chords: chord label sequence
+- melodyQualityMetrics: deterministic 품질 지표
+- feedbackEvidence: deterministic 근거 목록
 
 ---
 
@@ -300,8 +348,23 @@ chord timing은 `chords`에 노출하지 않고 MIDI 파일에 반영한다.
 ### 원칙
 
 - AI는 결과를 생성하지 않는다
-- AI는 설명과 평가만 수행한다
+- AI는 melody, note, scale, chord, MIDI를 변경하지 않는다
+- AI는 deterministic 결과를 설명하고 코칭 피드백만 작성한다
+- AI 응답은 evidence 기반이어야 한다
+- evidence에 없는 결론은 추측으로 확장하지 않는다
 - AI 실패는 전체 실패가 아니다
+
+---
+
+### 향후 피드백 파이프라인
+
+deterministic analysis
+→ melody quality metrics
+→ feedback evidence
+→ AI feedback explanation
+
+이 흐름은 음악 생성 파이프라인이 아니다.
+피드백 생성은 분석 결과를 해석하는 후처리 단계다.
 
 ---
 
@@ -325,8 +388,8 @@ chord timing은 `chords`에 노출하지 않고 MIDI 파일에 반영한다.
 
 ## 12. API 구조
 
-POST /api/audio  
-GET /api/audio/{audioId}  
+POST /api/audio
+GET /api/audio/{audioId}
 GET /api/audio/{audioId}/result
 GET /api/audio/{audioId}/files/preview
 GET /api/audio/{audioId}/files/midi
@@ -340,6 +403,8 @@ GET /api/audio/{audioId}/files/midi
 - audio_meta
 - analysis_request
 - analysis_result
+- melodyMetrics / feedbackEvidence는 AI 피드백 구현 전까지 analysis_result에 JSON 문자열로 저장한다
+- feedbackText / chordExplanation / naturalnessScore 생성은 후속 단계로 둔다
 
 ---
 
@@ -353,11 +418,44 @@ GET /api/audio/{audioId}/files/midi
 
 ## 14. 아키텍처
 
-Frontend  
-→ Spring Boot  
-→ Python Audio Service  
-→ Local Storage  
+Frontend
+→ Spring Boot
+→ Python Audio Service
+→ Local Storage
 → PostgreSQL
+
+---
+
+### 14.1 책임 분리
+
+Spring Boot:
+
+- 업로드, 상태 전이, timeout, 저장 orchestration
+- Python 분석 결과 저장
+- AI 피드백 호출 및 실패 격리
+
+Python Audio Service:
+
+- Basic Pitch 실행
+- deterministic cleanup
+- scale fitting
+- quantization
+- chord inference
+- MIDI/preview 생성
+- melody quality metrics 계산
+- feedback evidence 생성
+
+AI Assistant:
+
+- deterministic 결과 설명
+- evidence 기반 코칭 피드백 작성
+- 사용자 친화적 설명 생성
+
+Frontend:
+
+- 업로드와 polling
+- MIDI/preview 재생
+- 분석 결과와 AI 피드백 표시
 
 ---
 
@@ -393,4 +491,4 @@ Frontend
 - rule-based generation
 - async processing
 - controlled failure
-- AI = 설명 + 평가
+- AI = evidence 기반 설명 + 코칭 피드백
