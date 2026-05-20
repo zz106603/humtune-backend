@@ -1,36 +1,60 @@
-# HumTune Backend
+# HumTune
 
-HumTune은 사용자가 짧게 녹음한 허밍을 분석해 보정된 멜로디, 코드 진행, MIDI 결과를 만드는 MVP입니다.
-이 저장소는 업로드 API, 분석 상태 관리, 비동기 처리, 결과 저장/조회를 담당하는 Spring Boot 백엔드입니다.
+HumTune은 짧은 허밍을 분석해 멜로디 아이디어를 정리하고, 어울리는 코드와 MIDI 반주 결과를 만들어 주는 음악 아이디어 탐색 도구입니다.
 
-핵심 설계는 단순합니다.
+AI가 음악을 대신 작곡하는 서비스가 아닙니다.
+음정 정리, 스케일/코드 판단, MIDI 생성은 deterministic pipeline이 담당하고, AI는 분석 결과를 바탕으로 멜로디의 분위기와 확장 방향을 설명합니다.
 
-- 음악 판단은 AI가 아니라 deterministic rule-based pipeline이 수행합니다.
-- Spring Boot는 요청 흐름, 상태, 저장, Python 호출을 관리합니다.
-- Python Audio Service는 오디오/음악 처리만 담당합니다.
-- AI는 결과 생성이 아니라 설명과 피드백 보조 역할로 제한합니다.
+이 저장소는 업로드 API, 분석 상태 관리, Python Audio Service orchestration, 결과 저장/조회를 담당하는 Spring Boot 백엔드입니다.
 
-## MVP 범위
+## Preview
 
-포함:
+> ![Image](https://github.com/user-attachments/assets/9276d80b-cae5-477c-8cca-6e4038340578)
 
-- 5~10초 허밍 오디오 업로드
-- 비동기 분석 요청 처리
-- pitch detection, note sequence 변환, scale fitting, quantization
-- chord inference, MIDI generation
-- 상태 조회 및 결과 조회
-- PostgreSQL 기반 메타데이터/상태/결과 저장
+## 사용자 흐름
 
-제외:
+1. 허밍 오디오를 업로드합니다.
+2. HumTune이 멜로디를 정리하고 스케일/코드를 분석합니다.
+3. MIDI와 preview audio로 결과를 들어봅니다.
+4. AI가 멜로디의 인상, 반복 패턴, 코드와의 어울림, 확장 방향을 설명합니다.
 
-- 완성곡 생성
-- 보컬 합성
-- 다중 악기 편곡
-- 실시간 처리
-- AI 기반 핵심 음악 결정
-- 운영 인프라 자동화
+## 핵심 기능
 
-## System Architecture
+- 허밍 업로드 및 비동기 분석
+- Basic Pitch 기반 note 추출
+- deterministic cleanup, scale fitting, quantization
+- chord inference 및 MIDI/preview 생성
+- 분석 결과 기반 AI melody interpretation
+- 상태 polling 및 결과 API 제공
+
+## HumTune이 아닌 것
+
+- AI 음악 생성 서비스가 아닙니다.
+- 보컬 트레이닝 도구가 아닙니다.
+- 노래 실력 평가 서비스가 아닙니다.
+- AI가 scale, chord, note, MIDI를 결정하지 않습니다.
+
+## AI와 Deterministic 역할
+
+Deterministic pipeline:
+
+- pitch detection
+- note cleanup
+- scale fitting
+- quantization
+- chord inference
+- MIDI/preview 생성
+
+AI feedback:
+
+- 멜로디의 분위기와 음악적 인상 설명
+- 반복 모티프나 음역 흐름 해석
+- 코드 진행과의 어울림 설명
+- 편곡/작곡 확장 방향 제안
+
+AI는 분석 결과를 설명할 뿐, 멜로디·코드·스케일·노트를 수정하지 않습니다.
+
+## 아키텍처 요약
 
 ```mermaid
 flowchart LR
@@ -52,16 +76,7 @@ flowchart LR
     Frontend -->|status / result| Spring
 ```
 
-책임 분리:
-
-- Spring Boot: 업로드 검증, 파일 저장 경로 관리, `AnalysisRequest` 상태 전이, 비동기 worker 실행, Python 호출, 결과 저장/조회
-- Python Audio Service: 오디오 읽기, pitch 추출, note 변환, scale/chord 계산, MIDI 생성
-- PostgreSQL: `audio_meta`, `analysis_request`, `analysis_result` 저장
-- Local Storage: 원본 오디오와 생성된 MIDI 파일 저장
-
-이 구조는 오디오 처리에 적합한 Python 영역과, API/트랜잭션/상태 관리에 적합한 Spring 영역을 분리하기 위한 선택입니다.
-
-## Audio Analysis Pipeline
+## 분석 파이프라인
 
 ```mermaid
 flowchart TD
@@ -89,21 +104,7 @@ flowchart TD
 
 이 파이프라인은 동일 입력에 대해 동일 결과를 목표로 합니다. scale/chord 선택은 규칙과 tie-break 기준으로 결정되며, MIDI 생성도 시스템 코드가 수행합니다.
 
-AI가 하지 않는 일:
-
-- pitch 추출
-- 음정/박자 보정
-- scale/chord 단독 결정
-- MIDI 생성
-
-AI가 할 수 있는 일:
-
-- 결과 설명
-- 사용자 피드백 문장 생성
-- 생성 결과의 자연스러움 평가
-- 애매한 후보에 대한 보조 평가
-
-## Async Status Flow
+## 비동기 처리 흐름
 
 `POST /api/audio`는 분석 완료를 기다리지 않습니다. 업로드 요청은 `PENDING` 상태를 만든 뒤 바로 응답하고, 분석은 worker가 이어서 처리합니다.
 
@@ -133,13 +134,13 @@ flowchart LR
 
 Spring은 Python 호출 실패, timeout, HTTP 오류, 필수 결과 누락을 `FAILED`로 저장합니다. 클라이언트는 상태/결과 API를 polling하면서 실패 사유를 확인합니다.
 
-## Domain Model
+## 도메인 모델
 
 - `AudioMeta`: 원본 파일명, content type, 파일 크기, raw audio path, 생성 시각
 - `AnalysisRequest`: 분석 요청 상태, 요청/시작/완료/실패 시각, 오류 메시지
 - `AnalysisResult`: detected scale, confidence, raw/final notes JSON, chord label sequence JSON, melody metrics JSON, feedback evidence JSON, MIDI path, preview audio path, processing time, 설명/피드백용 `feedbackText`, `chordExplanation`, `naturalnessScore`
 
-## API Summary
+## API 요약
 
 ### `POST /api/audio`
 
@@ -183,7 +184,7 @@ Spring은 Python 호출 실패, timeout, HTTP 오류, 필수 결과 누락을 `F
 - `chords`: chord label sequence입니다. chord timing은 MIDI 파일에 반영되며 API 필드로 노출하지 않습니다.
 - `melodyMetrics`: deterministic 품질 지표입니다.
 - `feedbackEvidence`: deterministic 피드백 근거입니다.
-- `feedbackText`: deterministic 결과를 바탕으로 생성한 코칭 피드백입니다. AI 호출 실패 또는 미설정 시 fallback 문구를 반환합니다.
+- `feedbackText`: deterministic 결과를 바탕으로 생성한 멜로디 해석입니다. AI 호출 실패 또는 미설정 시 fallback 문구를 반환합니다.
 
 ```json
 {
@@ -199,7 +200,7 @@ Spring은 Python 호출 실패, timeout, HTTP 오류, 필수 결과 누락을 `F
   "midiPath": "storage/midi/sample.mid",
   "previewAudioPath": "storage/midi/sample.wav",
   "processingTimeMs": 1200,
-  "feedbackText": "멜로디가 비교적 안정적인 흐름으로 분석되었습니다.",
+  "feedbackText": "짧게 반복되는 모양이 있어 멜로디가 기억에 남는 훅처럼 작동합니다. 이 반복은 코드 위에서 곡의 중심 아이디어가 될 수 있으므로, 반주는 복잡하게 움직이기보다 모티프가 들릴 공간을 남기는 편이 좋습니다.",
   "errorMessage": null
 }
 ```
@@ -224,7 +225,7 @@ Spring은 Python 호출 실패, timeout, HTTP 오류, 필수 결과 누락을 `F
 
 서버 상태 확인용 엔드포인트입니다.
 
-## Python Audio Service Contract
+## Python Audio Service 계약
 
 Spring worker는 Python Audio Service의 내부 분석 API를 호출합니다.
 
@@ -257,7 +258,6 @@ Success response:
   "midiPath": "/absolute/path/to/storage/midi/sample.mid",
   "previewAudioPath": "/absolute/path/to/storage/midi/sample.wav",
   "processingTimeMs": 1200,
-  "feedbackText": "멜로디가 비교적 안정적인 흐름으로 분석되었습니다.",
   "errorMessage": null
 }
 ```
@@ -271,7 +271,7 @@ Failure response:
 }
 ```
 
-## Local Run
+## 로컬 실행
 
 Requirements:
 
@@ -344,7 +344,7 @@ curl -i http://localhost:8080/api/audio/1/files/preview
 curl -OJ http://localhost:8080/api/audio/1/files/midi
 ```
 
-## Failure Handling
+## 실패 처리
 
 - Empty file or non-`audio/*` upload: `400 Bad Request`
 - Missing `audioId`: `404 Not Found`
@@ -355,7 +355,7 @@ curl -OJ http://localhost:8080/api/audio/1/files/midi
 
 오디오 분석 내부 fallback은 Python Audio Service 책임입니다. Spring은 Python 응답이 계약을 만족하는지 검증하고 상태와 오류 메시지를 저장합니다.
 
-## Technical Decisions
+## 기술적 선택
 
 - 비동기 분석: 업로드 응답 시간을 Python 처리 시간과 분리합니다.
 - 상태 중심 모델: polling 기반 MVP에서 클라이언트 흐름을 단순하게 유지합니다.
@@ -363,9 +363,17 @@ curl -OJ http://localhost:8080/api/audio/1/files/midi
 - 규칙 기반 처리: 재현 가능한 결과와 테스트 가능한 선택 기준을 우선합니다.
 - JSON 결과 저장: notes/chords 구조 변경 가능성을 고려해 JSONB로 저장합니다.
 - Local storage: MVP에서는 파일 경로를 DB에 저장하고 실제 파일은 로컬에 둡니다.
-- AI 역할 제한: AI는 설명/피드백 보조이며, 핵심 음악 결과를 생성하지 않습니다.
+- AI 역할 제한: AI는 멜로디 해석과 작곡 방향 설명만 담당하며, 핵심 음악 결과를 생성하지 않습니다.
 
-## Known Limitations
+## 향후 방향
+
+- 더 다양한 멜로디 구조 해석
+- 코드 진행 설명 고도화
+- preview 품질 개선
+- 파일 수명 관리 및 object storage 연동
+- 사용자별 결과 히스토리
+
+## 현재 제한
 
 - Python Audio Service는 별도로 실행되어야 합니다.
 - 파일 저장소는 로컬 디렉터리 기준입니다.
