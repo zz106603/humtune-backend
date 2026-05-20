@@ -181,8 +181,9 @@ Spring은 Python 호출 실패, timeout, HTTP 오류, 필수 결과 누락을 `F
 - `adjustedNotes`: 최종 quantized melody notes입니다. 기존 API 호환을 위해 필드명은 유지합니다.
 - `originalNotes`: Basic Pitch raw notes입니다. 진단/호환용이며 주 산출물은 아닙니다.
 - `chords`: chord label sequence입니다. chord timing은 MIDI 파일에 반영되며 API 필드로 노출하지 않습니다.
-- `melodyMetrics`: deterministic 품질 지표입니다. AI 피드백을 생성하지 않고 그대로 노출합니다.
-- `feedbackEvidence`: deterministic 피드백 근거입니다. AI 피드백을 생성하지 않고 그대로 노출합니다.
+- `melodyMetrics`: deterministic 품질 지표입니다.
+- `feedbackEvidence`: deterministic 피드백 근거입니다.
+- `feedbackText`: deterministic 결과를 바탕으로 생성한 코칭 피드백입니다. AI 호출 실패 또는 미설정 시 fallback 문구를 반환합니다.
 
 ```json
 {
@@ -198,6 +199,7 @@ Spring은 Python 호출 실패, timeout, HTTP 오류, 필수 결과 누락을 `F
   "midiPath": "storage/midi/sample.mid",
   "previewAudioPath": "storage/midi/sample.wav",
   "processingTimeMs": 1200,
+  "feedbackText": "멜로디가 비교적 안정적인 흐름으로 분석되었습니다.",
   "errorMessage": null
 }
 ```
@@ -255,6 +257,7 @@ Success response:
   "midiPath": "/absolute/path/to/storage/midi/sample.mid",
   "previewAudioPath": "/absolute/path/to/storage/midi/sample.wav",
   "processingTimeMs": 1200,
+  "feedbackText": "멜로디가 비교적 안정적인 흐름으로 분석되었습니다.",
   "errorMessage": null
 }
 ```
@@ -303,9 +306,32 @@ SPRING_DATASOURCE_PASSWORD=humtune
 AUDIO_SERVICE_BASE_URL=http://127.0.0.1:8000
 AUDIO_SERVICE_CONNECT_TIMEOUT=3s
 AUDIO_SERVICE_RESPONSE_TIMEOUT=120s
+AI_FEEDBACK_ENABLED=false
+GEMINI_API_KEY=
+GEMINI_BASE_URL=https://generativelanguage.googleapis.com
+GEMINI_MODEL=
+GEMINI_GENERATE_CONTENT_PATH=/v1beta/models/{model}:generateContent
+GEMINI_CONNECT_TIMEOUT=3s
+GEMINI_READ_TIMEOUT=10s
 HUMTUNE_CORS_ALLOWED_ORIGINS=http://localhost:5173
 HUMTUNE_AUDIO_STORAGE_PATH=storage/raw
 HUMTUNE_AUDIO_OUTPUT_DIRECTORY=storage/midi
+```
+
+`AI_FEEDBACK_ENABLED=false`이면 Gemini 설정값 없이 deterministic fallback 피드백을 저장합니다. Gemini를 사용할 때도 API key는 환경 변수로만 주입하며 로그에 출력하지 않습니다.
+
+로컬 실행 시 Spring은 프로젝트 루트의 `.env`를 선택적으로 읽습니다. Gemini 호출을 실제로 시도하려면 `.env` 또는 실행 환경에 최소한 아래 값을 설정해야 합니다.
+
+```text
+AI_FEEDBACK_ENABLED=true
+GEMINI_API_KEY=<your-api-key>
+GEMINI_MODEL=<your-gemini-model>
+```
+
+터미널에서 직접 실행할 수도 있습니다.
+
+```bash
+AI_FEEDBACK_ENABLED=true GEMINI_API_KEY=... GEMINI_MODEL=... ./gradlew bootRun
 ```
 
 Upload and poll:
