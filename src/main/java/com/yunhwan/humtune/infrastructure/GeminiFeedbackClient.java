@@ -1,6 +1,8 @@
 package com.yunhwan.humtune.infrastructure;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yunhwan.humtune.application.AiFeedbackClient;
 import com.yunhwan.humtune.application.AiFeedbackPrompt;
 import jakarta.annotation.PostConstruct;
@@ -131,6 +133,7 @@ public class GeminiFeedbackClient implements AiFeedbackClient {
 	}
 
 	private record GeminiGenerateContentRequest(
+			@JsonProperty("system_instruction")
 			GeminiContent systemInstruction,
 			List<GeminiContent> contents
 	) {
@@ -159,9 +162,11 @@ public class GeminiFeedbackClient implements AiFeedbackClient {
 	private record GeminiPart(String text) {
 	}
 
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	private record GeminiGenerateContentResponse(List<GeminiCandidate> candidates) {
 	}
 
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	private record GeminiCandidate(GeminiContent content) {
 	}
 }

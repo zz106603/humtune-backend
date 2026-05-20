@@ -28,8 +28,10 @@ class GeminiFeedbackClientTest {
 			bodyBytes.set(exchange.getRequestBody().readAllBytes());
 			byte[] response = """
 					{
+					  "usageMetadata": {"totalTokenCount": 12},
 					  "candidates": [
 					    {
+					      "finishReason": "STOP",
 					      "content": {
 					        "parts": [
 					          {"text": "리듬이 안정적으로 분석되었습니다."}
@@ -62,7 +64,8 @@ class GeminiFeedbackClientTest {
 			JsonNode request = objectMapper.readTree(bodyBytes.get());
 			assertThat(path.get()).isEqualTo("/v1beta/models/gemini-test:generateContent");
 			assertThat(query.get()).isEqualTo("key=test-api-key");
-			assertThat(request.get("systemInstruction").get("parts").get(0).get("text").asText()).isEqualTo("system");
+			assertThat(request.get("system_instruction").get("parts").get(0).get("text").asText()).isEqualTo("system");
+			assertThat(request.has("systemInstruction")).isFalse();
 			assertThat(request.get("contents").get(0).get("role").asText()).isEqualTo("user");
 			assertThat(request.get("contents").get(0).get("parts").get(0).get("text").asText()).isEqualTo("user");
 			assertThat(feedback).isEqualTo("리듬이 안정적으로 분석되었습니다.");
