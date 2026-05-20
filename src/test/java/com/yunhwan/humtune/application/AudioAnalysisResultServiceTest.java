@@ -66,6 +66,8 @@ class AudioAnalysisResultServiceTest {
 		assertThat(result.getOriginalNotesJson()).contains("\"pitch\":60");
 		assertThat(result.getAdjustedNotesJson()).contains("\"pitch\":62");
 		assertThat(result.getChordsJson()).contains("\"C\"");
+		assertThat(result.getMelodyMetricsJson()).contains("\"scaleToneRatio\":0.8");
+		assertThat(result.getFeedbackEvidenceJson()).contains("\"type\":\"scale\"");
 		assertThat(result.getMidiPath()).isEqualTo("storage/midi/sample.mid");
 		assertThat(result.getPreviewAudioPath()).isEqualTo("storage/midi/sample.wav");
 		assertThat(result.getProcessingTimeMs()).isEqualTo(123L);
@@ -109,6 +111,29 @@ class AudioAnalysisResultServiceTest {
 	}
 
 	@Test
+	void Python_응답의_알_수_없는_필드는_역직렬화에_실패하지_않는다() throws Exception {
+		PythonAudioAnalyzeResponse response = objectMapper.readValue("""
+				{
+				  "status": "COMPLETED",
+				  "detectedScale": "C_MAJOR",
+				  "keyConfidence": 0.9,
+				  "originalNotes": [],
+				  "adjustedNotes": [],
+				  "chords": [],
+				  "melodyMetrics": {"scaleToneRatio": 0.8},
+				  "feedbackEvidence": [{"type": "scale"}],
+				  "midiPath": "storage/midi/sample.mid",
+				  "previewAudioPath": null,
+				  "processingTimeMs": 123,
+				  "ignoredFutureField": true
+				}
+				""", PythonAudioAnalyzeResponse.class);
+
+		assertThat(response.melodyMetrics().get("scaleToneRatio").asDouble()).isEqualTo(0.8);
+		assertThat(response.feedbackEvidence().get(0).get("type").asText()).isEqualTo("scale");
+	}
+
+	@Test
 	void COMPLETED_응답에_detectedScale이_없으면_결과를_저장하지_않고_FAILED로_변경한다() throws Exception {
 		AnalysisRequest analysisRequest = processingAnalysisRequest();
 		when(analysisRequestRepository.findById(2L)).thenReturn(Optional.of(analysisRequest));
@@ -142,6 +167,8 @@ class AudioAnalysisResultServiceTest {
 				.originalNotesJson("[{\"pitch\":60}]")
 				.adjustedNotesJson("[{\"pitch\":62}]")
 				.chordsJson("[\"C\"]")
+				.melodyMetricsJson("{\"scaleToneRatio\":0.8}")
+				.feedbackEvidenceJson("[{\"type\":\"scale\"}]")
 				.midiPath("storage/midi/sample.mid")
 				.previewAudioPath("storage/midi/sample.wav")
 				.processingTimeMs(123L)
@@ -158,6 +185,8 @@ class AudioAnalysisResultServiceTest {
 		assertThat(response.originalNotes().get(0).get("pitch").asInt()).isEqualTo(60);
 		assertThat(response.adjustedNotes().get(0).get("pitch").asInt()).isEqualTo(62);
 		assertThat(response.chords().get(0).asText()).isEqualTo("C");
+		assertThat(response.melodyMetrics().get("scaleToneRatio").asDouble()).isEqualTo(0.8);
+		assertThat(response.feedbackEvidence().get(0).get("type").asText()).isEqualTo("scale");
 		assertThat(response.midiPath()).isEqualTo("storage/midi/sample.mid");
 		assertThat(response.previewAudioPath()).isEqualTo("storage/midi/sample.wav");
 		assertThat(response.processingTimeMs()).isEqualTo(123L);
@@ -314,6 +343,8 @@ class AudioAnalysisResultServiceTest {
 				objectMapper.readTree("[{\"pitch\":60}]"),
 				objectMapper.readTree("[{\"pitch\":62}]"),
 				objectMapper.readTree("[\"C\"]"),
+				objectMapper.readTree("{\"scaleToneRatio\":0.8}"),
+				objectMapper.readTree("[{\"type\":\"scale\"}]"),
 				Path.of("storage/midi/sample.mid").toAbsolutePath().normalize().toString(),
 				Path.of("storage/midi/sample.wav").toAbsolutePath().normalize().toString(),
 				123L,
