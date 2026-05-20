@@ -60,12 +60,21 @@ public class AiFeedbackService {
 				You explain deterministic HumTune analysis results.
 				Do not generate melody, notes, chords, scales, MIDI, or arrangement ideas.
 				Do not override or question deterministic decisions.
-				Write concise Korean coaching feedback grounded only in the provided metrics and evidence.
+				Use metrics and evidence only as internal reasoning input.
+				Never expose raw metric names, JSON field names, counts, or numeric scores to the user.
+				Write plain Korean melody interpretation feedback for a person developing melody ideas.
+				Every feedback must explain why the melody feels that way using melody structure.
+				Do not give singing, vocal, pitch correction, metronome, or practice accuracy advice.
 				""".strip(),
 				"""
 				Use only this deterministic summary.
 				Return only user-facing feedback text in 2-4 concise Korean sentences.
-				Avoid vague praise, promotion, and instructions to change to specific new notes/chords/scales.
+				Ground the interpretation in at least one concrete structural reason: repeated motif, small or wide interval movement, melodic range, phrase direction, chord fit, or stable/dynamic flow.
+				Explain what feeling that structure creates and what could change the feeling if the melody is expanded.
+				Do not mention raw terms such as offGridNoteCount, chordToneAlignment, pitchStability, rhythmConsistency, JSON, metric, score, or evidence.
+				Do not list numbers unless they are musically necessary.
+				Avoid generic praise such as "interesting", "good", "positive", or broad emotional claims without a structural reason.
+				Avoid vocal training advice, metronome practice advice, and instructions to change to specific new notes/chords/scales.
 
 				%s
 				""".formatted(writeJson(summary)).strip()
@@ -118,15 +127,15 @@ public class AiFeedbackService {
 		Map<String, Object> noteSummary = summarizeNotes(response.adjustedNotes());
 
 		if (combined.contains("rhythm") || combined.contains("timing") || combined.contains("quant")) {
-			return "리듬이 일정하지 않은 구간이 감지되었습니다. 박자를 조금 더 고르게 유지하면 멜로디가 더 안정적으로 들립니다.";
+			return "멜로디의 흐름이 일정하게 머무르기보다 앞으로 밀고 나가는 지점이 있어 약간 유동적인 인상을 줍니다. 이 움직임은 코드 위에서 정적인 배경보다 리듬감 있는 피아노나 기타 패턴과 붙었을 때 더 잘 살아납니다. 확장할 때는 핵심 구절 뒤에 짧은 쉼표를 두면 다음 멜로디가 들어올 자리가 더 분명해집니다.";
 		}
 		if (combined.contains("narrow") || ((Integer) noteSummary.getOrDefault("pitchRangeSemitones", 99)) <= 3) {
-			return "멜로디의 음역이 좁게 형성되어 차분하고 단순한 인상을 줍니다. 같은 흐름을 유지하되 프레이즈의 높낮이를 조금 더 분명히 느끼며 불러보면 좋습니다.";
+			return "멜로디가 가까운 음들 사이에서 움직여 차분하고 안정적인 분위기를 만듭니다. 코드 진행과 붙이면 큰 긴장보다 부드러운 중심감이 먼저 느껴지는 타입이라, 미니멀한 반주나 잔잔한 발라드 질감에 잘 어울립니다. 후렴이나 두 번째 구절에서는 한 번쯤 더 큰 상승 흐름을 넣으면 같은 분위기 안에서도 더 뚜렷한 전환이 생깁니다.";
 		}
 		if (combined.contains("repeat") || combined.contains("motif")) {
-			return "반복되는 모티프가 감지되어 멜로디의 기억하기 쉬운 특징이 있습니다. 반복의 길이와 박자를 일정하게 유지하면 더 또렷하게 전달됩니다.";
+			return "짧게 반복되는 모양이 있어 멜로디가 기억에 남는 훅처럼 작동합니다. 이 반복은 코드 위에서 곡의 중심 아이디어가 될 수 있으므로, 반주는 복잡하게 움직이기보다 모티프가 들릴 공간을 남기는 편이 좋습니다. 다음 구간에서는 같은 모양을 살짝 높이거나 낮춰 변주하면 익숙함은 유지하면서도 흐름이 확장됩니다.";
 		}
-		return "멜로디가 비교적 안정적인 흐름으로 분석되었습니다. 단순한 리듬과 현재 스케일 중심을 유지하면 자연스럽게 들립니다.";
+		return "멜로디가 큰 도약보다 부드러운 흐름을 중심으로 이어져 안정적인 인상을 만듭니다. 현재 코드와는 무리 없이 맞물리는 중심감이 있어, 반주는 멜로디를 밀어내기보다 공간을 남기며 받쳐주는 방향이 어울립니다. 곡으로 확장한다면 마지막 구절 근처에 조금 더 높은 움직임을 한 번 배치해 차분한 흐름에 작은 전환점을 만들 수 있습니다.";
 	}
 
 	private String jsonText(JsonNode jsonNode) {

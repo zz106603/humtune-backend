@@ -35,7 +35,7 @@
 ### 2.2 AI 역할 (최종 정의)
 
 AI는 음악을 생성하지 않는다.
-AI는 deterministic 분석 결과와 근거를 **설명, 평가, 코칭 문장으로 변환**하는 역할만 수행한다.
+AI는 deterministic 분석 결과와 근거를 **멜로디 해석과 작곡 방향 문장으로 변환**하는 역할만 수행한다.
 
 AI의 역할:
 
@@ -43,7 +43,7 @@ AI의 역할:
 - 사용자 허밍 피드백 생성
 - 생성된 결과의 자연스러움 평가
 - deterministic 지표를 사용자 친화적인 설명으로 변환
-- 분석 근거 기반의 음악 코칭 피드백 생성
+- 분석 근거 기반의 멜로디 해석 피드백 생성
 
 ---
 
@@ -349,11 +349,13 @@ chord timing은 `chords`에 노출하지 않고 MIDI 파일에 반영한다.
 
 - AI는 결과를 생성하지 않는다
 - AI는 melody, note, scale, chord, MIDI를 변경하지 않는다
-- AI는 deterministic 결과를 설명하고 코칭 피드백만 작성한다
+- AI는 deterministic 결과를 설명하고 멜로디 분위기, 코드 어울림, 편곡 방향만 작성한다
 - AI 응답은 evidence 기반이어야 한다
 - evidence에 없는 결론은 추측으로 확장하지 않는다
 - AI 입력은 melodyMetrics, feedbackEvidence, detectedScale, adjustedNotes summary, chord summary로 제한한다
 - AI 호출은 Gemini generateContent를 사용하며 API key/model은 환경 변수로만 주입한다
+- AI 출력은 쉬운 한국어 멜로디 해석 문장이어야 하며 raw metric 이름, JSON 필드명, 점수 나열을 노출하지 않는다
+- AI 출력은 반복, 음 간격, 음역, 흐름, chord fit 중 최소 하나의 구조적 근거로 분위기와 확장 방향을 설명한다
 - AI 실패는 전체 실패가 아니다
 - AI 실패 또는 미설정 시 deterministic fallback feedbackText를 저장한다
 

@@ -25,6 +25,12 @@ class AiFeedbackServiceTest {
 		assertThat(captured[0].userPrompt()).contains("feedbackEvidence");
 		assertThat(captured[0].userPrompt()).contains("adjustedNotesSummary");
 		assertThat(captured[0].userPrompt()).contains("chordSummary");
+		assertThat(captured[0].systemPrompt()).contains("melody interpretation feedback");
+		assertThat(captured[0].systemPrompt()).contains("melody structure");
+		assertThat(captured[0].userPrompt()).contains("repeated motif", "interval movement", "chord fit");
+		assertThat(captured[0].userPrompt()).contains("what could change the feeling");
+		assertThat(captured[0].userPrompt()).contains("Do not mention raw terms");
+		assertThat(captured[0].userPrompt()).contains("Avoid vocal training advice");
 		assertThat(captured[0].userPrompt()).doesNotContain("originalNotes");
 	}
 
@@ -36,7 +42,8 @@ class AiFeedbackServiceTest {
 
 		String feedback = service.generateFeedback(responseWithEvidence("[{\"type\":\"rhythm\"}]"));
 
-		assertThat(feedback).contains("리듬");
+		assertThat(feedback).contains("앞으로 밀고 나가는");
+		assertThat(feedback).contains("짧은 쉼표");
 	}
 
 	@Test
@@ -45,7 +52,8 @@ class AiFeedbackServiceTest {
 
 		String feedback = service.generateFeedback(responseWithNotes("[{\"pitch\":60},{\"pitch\":62}]"));
 
-		assertThat(feedback).contains("음역");
+		assertThat(feedback).contains("가까운 음들");
+		assertThat(feedback).contains("상승 흐름");
 	}
 
 	private PythonAudioAnalyzeResponse response() throws Exception {
