@@ -60,6 +60,8 @@ public class AudioAnalysisResultService {
 							.originalNotesJson(writeJson(response.originalNotes()))
 							.adjustedNotesJson(writeJson(response.adjustedNotes()))
 							.chordsJson(writeJson(response.chords()))
+							.melodyMetricsJson(writeJsonOrNull(response.melodyMetrics()))
+							.feedbackEvidenceJson(writeJsonOrNull(response.feedbackEvidence()))
 							.midiPath(toStoredPath(response.midiPath()))
 							.previewAudioPath(toStoredPathOrNull(response.previewAudioPath()))
 							.processingTimeMs(response.processingTimeMs())
@@ -88,6 +90,8 @@ public class AudioAnalysisResultService {
 						readJson(result.getOriginalNotesJson()),
 						readJson(result.getAdjustedNotesJson()),
 						readJson(result.getChordsJson()),
+						readJsonOrNull(result.getMelodyMetricsJson()),
+						readJsonOrNull(result.getFeedbackEvidenceJson()),
 						result.getMidiPath(),
 						result.getPreviewAudioPath(),
 						result.getProcessingTimeMs(),
@@ -100,6 +104,8 @@ public class AudioAnalysisResultService {
 		return new AudioAnalysisResultResponse(
 				audioId,
 				status,
+				null,
+				null,
 				null,
 				null,
 				null,
@@ -135,12 +141,26 @@ public class AudioAnalysisResultService {
 		}
 	}
 
+	private String writeJsonOrNull(JsonNode jsonNode) {
+		if (jsonNode == null || jsonNode.isNull()) {
+			return null;
+		}
+		return writeJson(jsonNode);
+	}
+
 	private JsonNode readJson(String json) {
 		try {
 			return objectMapper.readTree(json);
 		} catch (JsonProcessingException ex) {
 			throw new IllegalStateException("Failed to read analysis result", ex);
 		}
+	}
+
+	private JsonNode readJsonOrNull(String json) {
+		if (isBlank(json)) {
+			return null;
+		}
+		return readJson(json);
 	}
 
 	private boolean hasMissingRequiredResultField(PythonAudioAnalyzeResponse response) {
