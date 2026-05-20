@@ -35,6 +35,9 @@ class AudioAnalysisResultServiceTest {
 	@Mock
 	private AnalysisResultRepository analysisResultRepository;
 
+	@Mock
+	private AiFeedbackService aiFeedbackService;
+
 	private ObjectMapper objectMapper;
 	private AudioAnalysisResultService audioAnalysisResultService;
 
@@ -45,6 +48,7 @@ class AudioAnalysisResultServiceTest {
 				analysisRequestRepository,
 				analysisResultRepository,
 				objectMapper,
+				aiFeedbackService,
 				Path.of("storage/midi")
 		);
 	}
@@ -54,6 +58,7 @@ class AudioAnalysisResultServiceTest {
 		AnalysisRequest analysisRequest = processingAnalysisRequest();
 		when(analysisRequestRepository.findById(2L)).thenReturn(Optional.of(analysisRequest));
 		PythonAudioAnalyzeResponse response = response();
+		when(aiFeedbackService.generateFeedback(response)).thenReturn("리듬이 안정적으로 분석되었습니다.");
 
 		audioAnalysisResultService.completeWithResult(2L, response);
 
@@ -71,6 +76,7 @@ class AudioAnalysisResultServiceTest {
 		assertThat(result.getMidiPath()).isEqualTo("storage/midi/sample.mid");
 		assertThat(result.getPreviewAudioPath()).isEqualTo("storage/midi/sample.wav");
 		assertThat(result.getProcessingTimeMs()).isEqualTo(123L);
+		assertThat(result.getFeedbackText()).isEqualTo("리듬이 안정적으로 분석되었습니다.");
 		assertThat(analysisRequest.getStatus()).isEqualTo(AnalysisStatus.COMPLETED);
 	}
 
@@ -172,6 +178,7 @@ class AudioAnalysisResultServiceTest {
 				.midiPath("storage/midi/sample.mid")
 				.previewAudioPath("storage/midi/sample.wav")
 				.processingTimeMs(123L)
+				.feedbackText("리듬이 안정적으로 분석되었습니다.")
 				.build();
 		when(analysisRequestRepository.findByAudioMeta_AudioId(1L)).thenReturn(Optional.of(analysisRequest));
 		when(analysisResultRepository.findByAnalysisRequest(analysisRequest)).thenReturn(Optional.of(result));
@@ -190,6 +197,7 @@ class AudioAnalysisResultServiceTest {
 		assertThat(response.midiPath()).isEqualTo("storage/midi/sample.mid");
 		assertThat(response.previewAudioPath()).isEqualTo("storage/midi/sample.wav");
 		assertThat(response.processingTimeMs()).isEqualTo(123L);
+		assertThat(response.feedbackText()).isEqualTo("리듬이 안정적으로 분석되었습니다.");
 		assertThat(response.errorMessage()).isNull();
 	}
 
@@ -202,6 +210,7 @@ class AudioAnalysisResultServiceTest {
 				analysisRequestRepository,
 				analysisResultRepository,
 				objectMapper,
+				aiFeedbackService,
 				outputDirectory
 		);
 		AnalysisRequest analysisRequest = completedAnalysisRequest();
@@ -233,6 +242,7 @@ class AudioAnalysisResultServiceTest {
 				analysisRequestRepository,
 				analysisResultRepository,
 				objectMapper,
+				aiFeedbackService,
 				outputDirectory
 		);
 		AnalysisRequest analysisRequest = completedAnalysisRequest();
@@ -263,6 +273,7 @@ class AudioAnalysisResultServiceTest {
 				analysisRequestRepository,
 				analysisResultRepository,
 				objectMapper,
+				aiFeedbackService,
 				outputDirectory
 		);
 		AnalysisRequest analysisRequest = completedAnalysisRequest();

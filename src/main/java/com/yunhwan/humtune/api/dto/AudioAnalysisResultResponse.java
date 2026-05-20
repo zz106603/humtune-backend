@@ -16,6 +16,7 @@ public record AudioAnalysisResultResponse(
 		String midiPath,
 		String previewAudioPath,
 		Long processingTimeMs,
+		String feedbackText,
 		String errorMessage
 ) {
 	public AudioAnalysisResultResponse(
@@ -44,6 +45,7 @@ public record AudioAnalysisResultResponse(
 				midiPath,
 				previewAudioPath,
 				processingTimeMs,
+				null,
 				errorMessage
 		);
 	}

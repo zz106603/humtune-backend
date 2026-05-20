@@ -1,6 +1,8 @@
 spring:
   application:
     name: humtune
+  config:
+    import: optional:file:.env[.properties]
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/humtune}
     username: ${SPRING_DATASOURCE_USERNAME:humtune}
@@ -18,6 +20,17 @@ audio-service:
   base-url: ${AUDIO_SERVICE_BASE_URL:http://127.0.0.1:8000}
   connect-timeout: ${AUDIO_SERVICE_CONNECT_TIMEOUT:3s}
   response-timeout: ${AUDIO_SERVICE_RESPONSE_TIMEOUT:120s}
+
+ai-feedback:
+  enabled: ${AI_FEEDBACK_ENABLED:false}
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+  model: ${GEMINI_MODEL:}
+  generate-content-path: ${GEMINI_GENERATE_CONTENT_PATH:/v1beta/models/{model}:generateContent}
+  connect-timeout: ${GEMINI_CONNECT_TIMEOUT:3s}
+  read-timeout: ${GEMINI_READ_TIMEOUT:10s}
 
 humtune:
   cors:
