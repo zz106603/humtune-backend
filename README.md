@@ -137,7 +137,7 @@ Spring은 Python 호출 실패, timeout, HTTP 오류, 필수 결과 누락을 `F
 
 - `AudioMeta`: 원본 파일명, content type, 파일 크기, raw audio path, 생성 시각
 - `AnalysisRequest`: 분석 요청 상태, 요청/시작/완료/실패 시각, 오류 메시지
-- `AnalysisResult`: detected scale, confidence, raw/final notes JSON, chord label sequence JSON, MIDI path, preview audio path, processing time, 설명/피드백용 `feedbackText`, `chordExplanation`, `naturalnessScore`
+- `AnalysisResult`: detected scale, confidence, raw/final notes JSON, chord label sequence JSON, melody metrics JSON, feedback evidence JSON, MIDI path, preview audio path, processing time, 설명/피드백용 `feedbackText`, `chordExplanation`, `naturalnessScore`
 
 ## API Summary
 
@@ -181,6 +181,8 @@ Spring은 Python 호출 실패, timeout, HTTP 오류, 필수 결과 누락을 `F
 - `adjustedNotes`: 최종 quantized melody notes입니다. 기존 API 호환을 위해 필드명은 유지합니다.
 - `originalNotes`: Basic Pitch raw notes입니다. 진단/호환용이며 주 산출물은 아닙니다.
 - `chords`: chord label sequence입니다. chord timing은 MIDI 파일에 반영되며 API 필드로 노출하지 않습니다.
+- `melodyMetrics`: deterministic 품질 지표입니다. AI 피드백을 생성하지 않고 그대로 노출합니다.
+- `feedbackEvidence`: deterministic 피드백 근거입니다. AI 피드백을 생성하지 않고 그대로 노출합니다.
 
 ```json
 {
@@ -191,6 +193,8 @@ Spring은 Python 호출 실패, timeout, HTTP 오류, 필수 결과 누락을 `F
   "originalNotes": [{"pitch": 60}],
   "adjustedNotes": [{"pitch": 60}],
   "chords": ["C"],
+  "melodyMetrics": {"scaleToneRatio": 0.9},
+  "feedbackEvidence": [{"type": "scale"}],
   "midiPath": "storage/midi/sample.mid",
   "previewAudioPath": "storage/midi/sample.wav",
   "processingTimeMs": 1200,
@@ -246,6 +250,8 @@ Success response:
   "originalNotes": [{"pitch": 60}],
   "adjustedNotes": [{"pitch": 60}],
   "chords": ["C"],
+  "melodyMetrics": {"scaleToneRatio": 0.9},
+  "feedbackEvidence": [{"type": "scale"}],
   "midiPath": "/absolute/path/to/storage/midi/sample.mid",
   "previewAudioPath": "/absolute/path/to/storage/midi/sample.wav",
   "processingTimeMs": 1200,
