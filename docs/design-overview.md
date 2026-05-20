@@ -270,7 +270,7 @@ C - F - G - C
 ### 8.5 AI 실패
 
 → COMPLETED 유지
-→ feedbackText = null
+→ deterministic fallback feedbackText 저장
 
 ---
 
@@ -352,7 +352,10 @@ chord timing은 `chords`에 노출하지 않고 MIDI 파일에 반영한다.
 - AI는 deterministic 결과를 설명하고 코칭 피드백만 작성한다
 - AI 응답은 evidence 기반이어야 한다
 - evidence에 없는 결론은 추측으로 확장하지 않는다
+- AI 입력은 melodyMetrics, feedbackEvidence, detectedScale, adjustedNotes summary, chord summary로 제한한다
+- AI 호출은 Gemini generateContent를 사용하며 API key/model은 환경 변수로만 주입한다
 - AI 실패는 전체 실패가 아니다
+- AI 실패 또는 미설정 시 deterministic fallback feedbackText를 저장한다
 
 ---
 
@@ -403,8 +406,9 @@ GET /api/audio/{audioId}/files/midi
 - audio_meta
 - analysis_request
 - analysis_result
-- melodyMetrics / feedbackEvidence는 AI 피드백 구현 전까지 analysis_result에 JSON 문자열로 저장한다
-- feedbackText / chordExplanation / naturalnessScore 생성은 후속 단계로 둔다
+- melodyMetrics / feedbackEvidence는 analysis_result에 JSON 문자열로 저장한다
+- feedbackText는 AI 또는 deterministic fallback으로 저장한다
+- chordExplanation / naturalnessScore 생성은 후속 단계로 둔다
 
 ---
 
