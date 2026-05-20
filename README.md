@@ -9,7 +9,7 @@ AI가 음악을 대신 작곡하는 서비스가 아닙니다.
 
 ## Preview
 
-> ![Image](https://github.com/user-attachments/assets/9276d80b-cae5-477c-8cca-6e4038340578)
+https://github.com/user-attachments/assets/9276d80b-cae5-477c-8cca-6e4038340578
 
 ## 사용자 흐름
 
